@@ -1,13 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SUGGESTED_QUESTIONS, answerQuestion, type AssistantAnswer } from '@/ai/answer';
-import { engineStore, useEngineState } from '@/ai/inference/engineStore';
+import { engineStore } from '@/ai/inference/engineStore';
 import { localModels } from '@/ai/inference/localModels';
-import { getModelSpec } from '@/ai/inference/modelCatalog';
 import { AnswerCard } from '@/components/AnswerCard';
 import { DemoBanner } from '@/components/AppChrome';
 import { OfflineBadge } from '@/components/OfflineBadge';
@@ -35,7 +34,6 @@ export default function Ask() {
   const { c } = useTheme();
   const type = useType();
   const params = useLocalSearchParams<{ q?: string }>();
-  const engine = useEngineState();
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
@@ -97,7 +95,6 @@ export default function Ask() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.q]);
 
-  const spec = engine.modelId ? getModelSpec(engine.modelId) : null;
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.bg }}>
@@ -108,14 +105,6 @@ export default function Ask() {
               Ask FAITH
             </AppText>
             <OfflineBadge />
-            {engine.status === 'error' ? (
-              <Pressable accessibilityRole="button" onPress={() => router.push('/settings/model')} style={styles.status}>
-                <Ionicons name="alert-circle-outline" size={14} color={c.danger} />
-                <AppText variant="caption" tone="danger" numberOfLines={1}>
-                  {spec?.name ?? 'Model'} failed to load — using record summaries
-                </AppText>
-              </Pressable>
-            ) : null}
           </View>
         </View>
         <ScrollView ref={scroll} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
@@ -126,7 +115,7 @@ export default function Ask() {
                 <View style={[styles.intro, { backgroundColor: c.primarySoft }]}>
                   <Illustration name="mascot-thinking" height={104} />
                   <AppText variant="body" tone="muted" style={{ flex: 1 }}>
-                    Ask about your readings, medications, lab results or appointments. Answers use your records on this phone and a curated offline library —
+                    Ask about your readings, medications, lab results or appointments. Answers use your records on this device and a curated offline library —
                     nothing is sent anywhere.
                   </AppText>
                 </View>
@@ -199,7 +188,6 @@ export default function Ask() {
 
 const styles = StyleSheet.create({
   header: { paddingHorizontal: SPACE.lg, paddingTop: SPACE.md, paddingBottom: SPACE.sm, flexDirection: 'row' },
-  status: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingVertical: 6, marginTop: SPACE.xs, minHeight: 32 },
   scroll: { paddingHorizontal: SPACE.lg, paddingBottom: SPACE.xl },
   inner: { width: '100%', maxWidth: 720, alignSelf: 'center', gap: SPACE.xl },
   intro: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, padding: SPACE.md, borderRadius: RADIUS.lg },

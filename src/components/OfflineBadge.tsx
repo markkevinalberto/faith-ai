@@ -1,7 +1,8 @@
 /**
- * Live proof that FAITH's AI needs no cloud: shows the phone's connection state next to the local
- * AI components that are running right now. In airplane mode it reads "Offline · AI running on
- * this phone" while answers, search, voice and scanning keep working.
+ * Live proof that FAITH's AI needs no cloud, as a compact dropdown at the top of Ask FAITH.
+ * Collapsed: one line with the connection state and the chat model in use. Expanded: switch between
+ * installed chat models, see which other local AI parts are ready, or open the model settings.
+ * In airplane mode it reads "Airplane mode · AI on this phone" while everything keeps working.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
@@ -9,9 +10,12 @@ import * as Network from 'expo-network';
 import { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
-import { useEngineState } from '@/ai/inference/engineStore';
+import { engineStore, useEngineState } from '@/ai/inference/engineStore';
 import { localModels, useLocalModels } from '@/ai/inference/localModels';
-import { getModelSpec } from '@/ai/inference/modelCatalog';
+import { getModelSpec, type ModelSpec } from '@/ai/inference/modelCatalog';
+import { SETTINGS, setSetting } from '@/db/repo/profiles';
+import { useApp } from '@/state/AppState';
+import { Button } from '@/ui/Button';
 import { AppText } from '@/ui/Text';
 import { RADIUS, SPACE, useTheme } from '@/ui/theme';
 
@@ -36,12 +40,17 @@ function useConnection(): Connection {
   return 'unknown';
 }
 
+const shortName = (spec: ModelSpec) => spec.name.replace(' Instruct', '');
+
 export function OfflineBadge() {
   const { c } = useTheme();
+  const { db } = useApp();
   const connection = useConnection();
   const engine = useEngineState();
   const helpers = useLocalModels();
+  const [open, setOpen] = useState(false);
   const [installed, setInstalled] = useState({ embedding: false, speech: false });
+  const [chatModels, setChatModels] = useState<ModelSpec[] | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -51,55 +60,136 @@ export function OfflineBadge() {
     };
   }, [helpers.embedding.status, helpers.speech.status]);
 
-  const offline = connection === 'airplane' || connection === 'offline';
-  // The browser build runs the chat and embedding models through llama.cpp WebAssembly.
-  const here = Platform.OS === 'web' ? 'in this browser' : 'on this phone';
-  const headline = offline ? `${connection === 'airplane' ? 'Airplane mode' : 'Offline'} · AI running ${here}` : `Private · AI runs ${here}, nothing is sent`;
+  // The installed chat models are only needed once the dropdown is opened.
+  useEffect(() => {
+    if (!open) return;
+    let live = true;
+    void import('@/ai/inference/modelStore')
+      .then(({ modelStore }) => modelStore.status())
+      .then((all) => live && setChatModels(all.filter((m) => m.spec.kind === 'llm' && m.installed).map((m) => m.spec)))
+      .catch(() => live && setChatModels([]));
+    return () => {
+      live = false;
+    };
+  }, [open]);
 
-  const llm = engine.status === 'ready' && engine.modelId ? getModelSpec(engine.modelId) : null;
-  const parts: { key: string; label: string; on: boolean }[] = [
-    { key: 'llm', label: llm ? `${llm.family} ${llm.parameters}` : engine.status === 'loading' ? 'LLM loading…' : 'LLM off', on: !!llm },
-    { key: 'search', label: 'Semantic search', on: helpers.embedding.status === 'ready' || installed.embedding },
+  const offline = connection === 'airplane' || connection === 'offline';
+  const here = Platform.OS === 'web' ? 'in this browser' : 'on this phone';
+  const headline = offline ? `${connection === 'airplane' ? 'Airplane mode' : 'Offline'} · AI ${here}` : `Private · AI runs ${here}`;
+  const active = engine.modelId ? getModelSpec(engine.modelId) : null;
+  const modelLine =
+    engine.status === 'ready' && active
+      ? shortName(active)
+      : engine.status === 'loading'
+        ? `Loading ${active ? shortName(active) : 'model'}…`
+        : engine.status === 'error'
+          ? 'Model failed to load · answers from your records'
+          : 'No chat model · answers from your records';
+  const fg = offline ? c.success : c.primary;
+
+  const choose = async (spec: ModelSpec) => {
+    await setSetting(db, SETTINGS.activeModelId, spec.id);
+    await engineStore.load(spec);
+  };
+
+  const parts = [
+    { key: 'search', label: 'Search by meaning', on: helpers.embedding.status === 'ready' || installed.embedding },
     ...(Platform.OS === 'web'
-      ? [{ key: 'phone', label: 'Voice & scan · phone app', on: false }]
+      ? []
       : [
-          { key: 'voice', label: 'Whisper voice', on: helpers.speech.status === 'ready' || installed.speech },
-          { key: 'ocr', label: 'ML Kit scan', on: true },
+          { key: 'voice', label: 'Voice (Whisper)', on: helpers.speech.status === 'ready' || installed.speech },
+          { key: 'ocr', label: 'Label and report scanning', on: true },
         ]),
   ];
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${headline}. ${parts.map((p) => `${p.label} ${p.on ? 'on' : 'off'}`).join(', ')}`}
-      accessibilityHint="Opens on-device AI settings"
-      onPress={() => router.push('/settings/model')}
-      style={({ pressed }) => [styles.wrap, { backgroundColor: offline ? c.successSoft : c.primarySoft, opacity: pressed ? 0.85 : 1 }]}>
-      <View style={styles.row}>
-        <Ionicons name={connection === 'airplane' ? 'airplane' : offline ? 'cloud-offline' : 'shield-checkmark'} size={16} color={offline ? c.success : c.primary} />
-        <AppText variant="label" tone={offline ? 'success' : 'primary'} style={{ flexShrink: 1 }} numberOfLines={2}>
-          {headline}
-        </AppText>
-      </View>
-      {parts.length ? (
-        <View style={styles.pills}>
+    <View style={[styles.wrap, { backgroundColor: offline ? c.successSoft : c.primarySoft }]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        aria-expanded={open}
+        accessibilityLabel={`${headline}. ${modelLine}.`}
+        accessibilityHint={open ? 'Hides the on-device AI details' : 'Shows the on-device AI details and model choice'}
+        onPress={() => setOpen(!open)}
+        style={({ pressed }) => [styles.head, pressed && { opacity: 0.8 }]}>
+        <Ionicons name={connection === 'airplane' ? 'airplane' : offline ? 'cloud-offline' : 'shield-checkmark'} size={20} color={fg} />
+        <View style={{ flex: 1 }}>
+          <AppText variant="label" style={{ color: fg }}>
+            {headline}
+          </AppText>
+          <AppText variant="caption" tone="muted" numberOfLines={2}>
+            {modelLine}
+          </AppText>
+        </View>
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={22} color={fg} />
+      </Pressable>
+
+      {open ? (
+        <View style={[styles.panel, { borderTopColor: c.border }]}>
+          <AppText variant="label">Chat model</AppText>
+          {chatModels === null ? (
+            <AppText variant="caption" tone="muted">
+              Checking installed models…
+            </AppText>
+          ) : chatModels.length === 0 ? (
+            <AppText variant="caption" tone="muted">
+              No chat model installed yet. FAITH still answers from your records.
+            </AppText>
+          ) : (
+            <View accessibilityRole="radiogroup">
+              {chatModels.map((spec) => {
+                const selected = engine.modelId === spec.id;
+                return (
+                  <Pressable
+                    key={spec.id}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected, disabled: engine.status === 'loading' }}
+                    aria-checked={selected}
+                    accessibilityLabel={`${shortName(spec)}, ${spec.description}`}
+                    disabled={engine.status === 'loading'}
+                    onPress={() => void choose(spec)}
+                    style={styles.option}>
+                    <Ionicons name={selected ? 'radio-button-on' : 'radio-button-off'} size={22} color={selected ? c.primary : c.textSubtle} />
+                    <View style={{ flex: 1 }}>
+                      <AppText variant="bodyStrong">{shortName(spec)}</AppText>
+                      <AppText variant="caption" tone="muted">
+                        {spec.description}
+                      </AppText>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+
+          <AppText variant="label" style={{ marginTop: SPACE.xs }}>
+            Also running {here}
+          </AppText>
           {parts.map((p) => (
-            <View key={p.key} style={[styles.pill, { backgroundColor: p.on ? c.surface : 'transparent', borderColor: p.on ? c.border : c.borderStrong }]}>
-              <Ionicons name={p.on ? 'checkmark-circle' : 'ellipse-outline'} size={12} color={p.on ? c.success : c.textSubtle} />
-              <AppText variant="caption" tone={p.on ? 'default' : 'subtle'}>
+            <View key={p.key} style={styles.part}>
+              <Ionicons name={p.on ? 'checkmark-circle' : 'ellipse-outline'} size={18} color={p.on ? c.success : c.textSubtle} />
+              <AppText variant="body" tone={p.on ? 'default' : 'subtle'}>
                 {p.label}
+                {p.on ? '' : ' · not installed'}
               </AppText>
             </View>
           ))}
+          {Platform.OS === 'web' ? (
+            <AppText variant="caption" tone="muted">
+              Voice and label scanning are in the phone app.
+            </AppText>
+          ) : null}
+          <Button title="Manage AI models" icon="settings-outline" variant="secondary" size="sm" onPress={() => router.push('/settings/model')} style={{ alignSelf: 'flex-start', marginTop: SPACE.xs }} />
         </View>
       ) : null}
-    </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { alignSelf: 'stretch', borderRadius: RADIUS.md, paddingHorizontal: SPACE.md, paddingVertical: SPACE.sm, gap: SPACE.xs, marginTop: SPACE.xs },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  pills: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  pill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.pill, borderWidth: StyleSheet.hairlineWidth },
+  wrap: { alignSelf: 'stretch', borderRadius: RADIUS.md, marginTop: SPACE.xs, overflow: 'hidden' },
+  head: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, minHeight: 52, paddingHorizontal: SPACE.md, paddingVertical: SPACE.sm },
+  panel: { borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: SPACE.md, paddingTop: SPACE.sm, paddingBottom: SPACE.md, gap: SPACE.xs },
+  option: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, minHeight: 56, paddingVertical: SPACE.xs },
+  part: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, minHeight: 28 },
 });
