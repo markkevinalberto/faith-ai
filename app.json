@@ -99,9 +99,8 @@
         "expo-build-properties",
         {
           "android": {
-            "enableProguardInReleaseBuilds": true,
-            "extraProguardRules": "-keep class com.rnllama.** { *; }\n-keep class com.rnwhisper.** { *; }\n-keep class com.imxiqi.rnliveaudiostream.** { *; }\n-keep class com.rnmlkit.** { *; }",
-            "enableMinifyInReleaseBuilds": true,
+            "enableProguardInReleaseBuilds": false,
+            "enableMinifyInReleaseBuilds": false,
             "packagingOptions": {
               "pickFirst": ["**/libc++_shared.so"]
             }

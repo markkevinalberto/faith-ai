@@ -12,6 +12,7 @@ import * as SQLite from 'expo-sqlite';
 import { Platform } from 'react-native';
 
 import { migrate, type MigrationResult } from './migrate';
+import { createSingleConnectionDatabase } from './singleConnection';
 import type { SqlDatabase, SqlExecutor, SqlValue } from './sql';
 
 export const DB_NAME = 'carely.db';
@@ -34,6 +35,16 @@ export class DatabaseKeyError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'DatabaseKeyError';
+  }
+}
+
+/** Prefixes failures with the step that failed, so an error screen says where opening stopped. */
+async function step<T>(label: string, fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (e) {
+    if (e instanceof DatabaseKeyError) throw e;
+    throw new Error(`${label} failed: ${e instanceof Error ? e.message : String(e)}`);
   }
 }
 
@@ -68,25 +79,12 @@ function wrap(raw: SQLite.SQLiteDatabase): SqlExecutor {
   };
 }
 
+/**
+ * All statements, including transactions, go through the ONE keyed connection. expo-sqlite's
+ * `withExclusiveTransactionAsync` would open a second, un-keyed connection and fail under SQLCipher.
+ */
 function adapt(raw: SQLite.SQLiteDatabase): SqlDatabase {
-  const base = wrap(raw);
-  return {
-    ...base,
-    async transaction<T>(fn: (tx: SqlExecutor) => Promise<T>): Promise<T> {
-      let result: T | undefined;
-      if (Platform.OS === 'web') {
-        await raw.withTransactionAsync(async () => {
-          result = await fn(base);
-        });
-      } else {
-        await raw.withExclusiveTransactionAsync(async (txn) => {
-          result = await fn(wrap(txn));
-        });
-      }
-      return result as T;
-    },
-    close: () => raw.closeAsync(),
-  };
+  return createSingleConnectionDatabase(wrap(raw), () => raw.closeAsync());
 }
 
 export async function openAppDatabase(): Promise<OpenedDatabase> {
@@ -98,9 +96,10 @@ export async function openAppDatabase(): Promise<OpenedDatabase> {
     return { db, encryption: { active: false, cipherVersion: null, reason: 'Web preview — encryption unavailable' }, migration };
   }
 
-  const { key, created } = await getOrCreateKey();
-  const raw = await SQLite.openDatabaseAsync(DB_NAME);
-  await raw.execAsync(`PRAGMA key = "x'${key}'";`);
+  const { key, created } = await step('Reading the encryption key', getOrCreateKey);
+  const raw = await step('Opening the database file', () => SQLite.openDatabaseAsync(DB_NAME));
+  // SQLCipher 4.7+ rejects every statement until the key is set, so this must be the first one.
+  await step('Applying the encryption key', () => raw.execAsync(`PRAGMA key = "x'${key}'";`));
   try {
     // Fails with "file is not a database" when the key does not match.
     await raw.getFirstAsync('SELECT count(*) AS n FROM sqlite_master');
@@ -113,9 +112,9 @@ export async function openAppDatabase(): Promise<OpenedDatabase> {
     );
   }
   const cipher = await raw.getFirstAsync<{ cipher_version?: string }>('PRAGMA cipher_version').catch(() => null);
-  await raw.execAsync('PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;');
+  await step('Configuring the database', () => raw.execAsync('PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;'));
   const db = adapt(raw);
-  const migration = await migrate(db);
+  const migration = await step('Updating the database schema', () => migrate(db));
   const cipherVersion = cipher?.cipher_version ?? null;
   return {
     db,
