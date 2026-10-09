@@ -30,7 +30,9 @@
       "permissions": [
         "SCHEDULE_EXACT_ALARM",
         "USE_BIOMETRIC",
-        "POST_NOTIFICATIONS"
+        "POST_NOTIFICATIONS",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
       ],
       "blockedPermissions": [
         "android.permission.RECORD_AUDIO",
@@ -88,7 +90,8 @@
         {
           "android": {
             "enableProguardInReleaseBuilds": true,
-            "extraProguardRules": "-keep class com.rnllama.** { *; }"
+            "extraProguardRules": "-keep class com.rnllama.** { *; }",
+            "enableMinifyInReleaseBuilds": true
           }
         }
       ],
@@ -102,6 +105,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "b1bdadd8-6b1e-49b9-bb14-c944c98b6a41"
+      }
     }
   }
 }
