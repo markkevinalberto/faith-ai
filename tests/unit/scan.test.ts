@@ -2,7 +2,7 @@ import type { ChatMessage, GenerateOptions, InferenceEngine } from '@/ai/inferen
 import { extractLabReport, extractLabel, parseJsonObject } from '@/ai/scan/extract';
 import { groundFields, isGrounded } from '@/ai/scan/grounding';
 import { linesToRows } from '@/ai/scan/layout';
-import { parseLabReport, parseReference } from '@/ai/scan/labReportParser';
+import { parseLabReport, parseReference, parseRowLine, parseRowLines } from '@/ai/scan/labReportParser';
 import { frequencyFromInstructions, parseLabel, suggestTimes } from '@/ai/scan/labelParser';
 
 const LABEL = `SAMPLE PHARMACY
@@ -94,6 +94,45 @@ describe('lab report parser', () => {
     expect(parseReference('(3.5 - 5.0)')).toEqual({ low: 3.5, high: 5, text: '3.5 - 5.0' });
     expect(parseReference('≥ 60')).toMatchObject({ low: 60, high: null });
     expect(parseReference(null)).toEqual({ low: null, high: null, text: null });
+    expect(parseReference('Normal: up to 40')).toMatchObject({ high: 40, low: null });
+    expect(parseReference('above 60')).toMatchObject({ low: 60, high: null });
+  });
+
+  it('reads Philippine-style rows: two unit systems, flags before ranges, labelled ranges, OCR misreads, thousands', () => {
+    const rows = parseLabReport(`CLINICAL CHEMISTRY
+Fasting Blood Sugar 104 mg/dL 5.78 mmol/L 70 - 100 mg/dL H
+Cholesterol, Total 210 mg/dL Desirable: <200
+Triglycerides 1.9 mmoI/L H 0.3 - 1.7
+SGPT (ALT) 45 U/L 0 - 41 H
+HbA1c 7.2 % 4.0 - 6.0 HPLC
+Platelet Count 250,000 /uL 150,000 - 400,000`);
+    expect(rows.map((r) => [r.analyte, r.valueNum, r.unit, r.refLow, r.refHigh, r.flag])).toEqual([
+      ['Fasting Blood Sugar', 104, 'mg/dL', 70, 100, 'H'],
+      ['Cholesterol, Total', 210, 'mg/dL', null, 200, null],
+      ['Triglycerides', 1.9, 'mmol/L', 0.3, 1.7, 'H'],
+      ['SGPT (ALT)', 45, 'U/L', 0, 41, 'H'],
+      ['HbA1c', 7.2, '%', 4, 6, null],
+      ['Platelet Count', 250000, '/uL', 150000, 400000, null],
+    ]);
+    expect(rows.map((r) => r.biomarkerId)).toEqual(['fbs', 'total-cholesterol', 'triglycerides', 'alt', 'hba1c', null]);
+    expect(rows.every((r) => r.confidence === 'high')).toBe(true);
+  });
+
+  it('splits two tests printed side by side on one line', () => {
+    expect(parseRowLines('Glucose 104 mg/dL 70-100 Cholesterol 190 mg/dL <200').map((r) => [r.analyte, r.valueNum, r.refText])).toEqual([
+      ['Glucose', 104, '70-100'],
+      ['Cholesterol', 190, '<200'],
+    ]);
+  });
+
+  it('keeps codes in names and leaves dates, prose and bare reference lines alone', () => {
+    expect(parseRowLine('CA 19-9 12 U/mL 0 - 37')).toMatchObject({ analyte: 'CA 19-9', valueNum: 12, unit: 'U/mL', refHigh: 37 });
+    expect(parseRowLine('25-OH Vitamin D 30 ng/mL 30 - 100')).toMatchObject({ analyte: '25-OH Vitamin D', valueNum: 30, unit: 'ng/mL' });
+    expect(parseRowLine('WBC 7.5 x 10^9/L 4.0 - 11.0')).toMatchObject({ valueNum: 7.5, unit: 'x10^9/L', refLow: 4, refHigh: 11 });
+    expect(parseRowLine('Collected 10/01/2026 08:15')).toBeNull();
+    expect(parseRowLine('Your glucose was measured at 104 mg/dL')).toBeNull();
+    expect(parseRowLine('Glucose 70 - 100 mg/dL')).toBeNull();
+    expect(parseRowLine('Tel 09171234567')).toBeNull();
   });
 });
 

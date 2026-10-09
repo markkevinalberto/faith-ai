@@ -5,6 +5,7 @@
  * confirms everything before it is saved; nothing here writes to the database.
  */
 import type { InferenceEngine } from '../inference/types';
+import { findBiomarker } from '../knowledge/biomarkers';
 import { groundFields, isGrounded, normalizeForMatch } from './grounding';
 import { parseLabReport, parseReference, type LabRowDraft } from './labReportParser';
 import { frequencyFromInstructions, parseLabel, suggestTimes, type LabelDraft } from './labelParser';
@@ -182,6 +183,7 @@ export async function extractLabReport(ocrText: string, engine: InferenceEngine 
         flag: (flag === 'H' || flag === 'L') && new RegExp(`\\b${flag}\\b`, 'i').test(line) ? flag : null,
         sourceLine: line,
         confidence: 'low',
+        biomarkerId: findBiomarker(analyte)?.biomarker.id ?? null,
       });
       known.add(normalizeForMatch(analyte));
       meta.aiFilled.push(analyte);

@@ -10,6 +10,7 @@ import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { engineStore } from '@/ai/inference/engineStore';
+import { getBiomarker } from '@/ai/knowledge/biomarkers';
 import { extractLabReport, type ExtractionMeta } from '@/ai/scan/extract';
 import type { LabRowDraft } from '@/ai/scan/labReportParser';
 import { captureImage, recognizeText, type CapturedImage, type ImageSource } from '@/ai/scan/ocr';
@@ -61,6 +62,8 @@ export default function ScanLabReport() {
       if (engine) setPhase({ step: 'reading', label: 'Checking unclear lines with the on-device model…' });
       const { rows, meta } = await extractLabReport(ocr.text, engine);
       setSelected(new Set(rows.map((_, i) => i)));
+      // With nothing recognised, show what was read straight away so the person can see why.
+      setShowText(rows.length === 0);
       setPhase({ step: 'review', image, ocrText: ocr.text, ocrMs: ocr.durationMs, rows, meta });
     } catch (e) {
       setError(friendlyError(e));
@@ -148,7 +151,12 @@ export default function ScanLabReport() {
           </View>
         </View>
         {rows.length === 0 ? (
-          <Banner tone="info" message="No result rows could be read. You can still save the photo and type the values in on the next screen, or try a sharper photo of just the results table. Tap “Show scanned text” to see what the phone read." />
+          <Banner
+            tone="info"
+            title="No result rows could be read"
+            message="The text the phone read is shown below. Try a sharper, flatter photo of just the results table, or type the results in: pick the test, enter the number, done."
+            action={<Button title="Type the results instead" icon="create-outline" size="sm" onPress={() => router.replace('/care/lab/add')} />}
+          />
         ) : (
           <Card padded={false}>
             {rows.map((r, i) => {
@@ -170,6 +178,11 @@ export default function ScanLabReport() {
                       {ai ? <Pill label="On-device AI" tone="primary" /> : r.confidence === 'low' ? <Pill label="Check this row" tone="warning" /> : null}
                     </View>
                     <AppText variant="body">{rowValue(r)}</AppText>
+                    {r.biomarkerId ? (
+                      <AppText variant="caption" tone="subtle">
+                        Recognised as {getBiomarker(r.biomarkerId)?.name ?? r.analyte}
+                      </AppText>
+                    ) : null}
                     {r.refText ? (
                       <AppText variant="caption" tone="muted">
                         Reference on report: {r.refText}
