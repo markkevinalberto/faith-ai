@@ -181,6 +181,8 @@ export const SETTINGS = {
   notificationsAsked: 'notifications_asked',
   /** Device-wide text size: 'standard' | 'large' | 'xlarge'. */
   textSize: 'text_size',
+  /** First-run AI model set-up: 'done' | 'declined' (unset until one of those happens). */
+  aiSetup: 'ai_setup',
 } as const;
 
 export async function getSetting(db: SqlExecutor, key: string): Promise<string | null> {

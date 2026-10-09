@@ -4,9 +4,10 @@
  * assistant (LLM), semantic search (embeddings) and voice (Whisper). On Android the runtime is
  * llama.cpp / whisper.cpp; in the browser it is llama.cpp compiled to WebAssembly.
  */
-import { useState, useSyncExternalStore } from 'react';
+import { useState } from 'react';
 import { Platform, View } from 'react-native';
 
+import { activateModel, downloadModel, useDownloads } from '@/ai/inference/downloads';
 import { engineStore, useEngineState } from '@/ai/inference/engineStore';
 import { localModels, useLocalModels } from '@/ai/inference/localModels';
 import { MODEL_CATALOG, MODEL_KIND_LABEL, formatBytes, type ModelKind, type ModelSpec } from '@/ai/inference/modelCatalog';
@@ -26,20 +27,6 @@ const DEVICE = WEB ? 'browser' : 'phone';
 // Whisper is not part of the browser build.
 const KINDS: ModelKind[] = WEB ? ['llm', 'embedding'] : ['llm', 'embedding', 'speech'];
 
-/* Download progress survives leaving this screen. */
-type DownloadState = { progress: number; bytes: number; cancel: () => void } | undefined;
-const downloads = new Map<string, DownloadState>();
-const listeners = new Set<() => void>();
-let snapshot = 0;
-const emit = () => {
-  snapshot++;
-  listeners.forEach((l) => l());
-};
-const subscribe = (l: () => void) => {
-  listeners.add(l);
-  return () => listeners.delete(l);
-};
-
 function confirmThen(title: string, message: string, confirmLabel: string, onConfirm: () => void, destructive = false) {
   showAlert(title, message, [
     { text: 'Cancel', style: 'cancel' },
@@ -54,7 +41,8 @@ export default function ModelSettings() {
   const { c } = useTheme();
   const engine = useEngineState();
   const helpers = useLocalModels();
-  useSyncExternalStore(subscribe, () => snapshot, () => snapshot);
+  // Shared with the first-run set-up card on Home, so progress shows in both places.
+  const downloads = useDownloads();
   const [tick, setTick] = useState(0);
   const [bench, setBench] = useState<{ text: string; tps: number | null; ms: number } | null>(null);
   const [benching, setBenching] = useState(false);
@@ -77,33 +65,14 @@ export default function ModelSettings() {
   const refresh = () => setTick((t) => t + 1);
 
   /** Makes a newly installed model the one in use. */
-  const activate = async (spec: ModelSpec) => {
-    if (spec.kind === 'llm') {
-      await setSetting(db, SETTINGS.activeModelId, spec.id);
-      await engineStore.load(spec);
-    } else {
-      await localModels.release(spec.kind);
-      if (spec.kind === 'embedding') await localModels.getEmbedder();
-    }
-  };
+  const activate = (spec: ModelSpec) => activateModel(db, spec);
 
   const startDownload = async (spec: ModelSpec) => {
-    const { modelStore } = await import('@/ai/inference/modelStore');
-    const handle = modelStore.download(spec, (progress, bytes) => {
-      const cur = downloads.get(spec.id);
-      if (cur) downloads.set(spec.id, { ...cur, progress, bytes });
-      emit();
-    });
-    downloads.set(spec.id, { progress: 0, bytes: 0, cancel: handle.cancel });
-    emit();
     try {
-      await handle.promise;
-      await activate(spec);
+      await downloadModel(db, spec);
     } catch (e) {
       setNotice({ tone: 'danger', title: 'Download did not complete', message: friendlyError(e) });
     } finally {
-      downloads.delete(spec.id);
-      emit();
       refresh();
     }
   };

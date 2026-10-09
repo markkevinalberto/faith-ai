@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
+import { AiSetupCard } from '@/components/AiSetupCard';
 import { DemoBanner, ProfileButton, greeting } from '@/components/AppChrome';
 import { DateBadge } from '@/components/CareItems';
 import { DoseItem, canTakeNow } from '@/components/DoseItem';
@@ -93,6 +94,7 @@ export default function Home() {
       />
       <DemoBanner />
       {alert ? <EscalationCard result={alert} emergencyNumber={profile.emergencyNumber} /> : null}
+      <AiSetupCard />
 
       {!data && q.loading ? <InlineLoading label="Loading today’s plan…" /> : null}
 
