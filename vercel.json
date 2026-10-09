@@ -8,5 +8,6 @@
       ]
     }
   ],
-  "rewrites": [{ "source": "/((?!assets/|_expo/|favicon.ico|metadata.json).*)", "destination": "/index.html" }]
+  "rewrites": [{ "source": "/((?!api/|assets/|_expo/|favicon.ico|metadata.json).*)", "destination": "/index.html" }],
+  "functions": { "api/**/*.js": { "maxDuration": 30 } }
 }

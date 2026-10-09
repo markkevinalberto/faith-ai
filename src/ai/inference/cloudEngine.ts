@@ -13,6 +13,8 @@ export interface CloudEngineConfig {
   apiKey: string;
   /** Shown next to answers, e.g. "Groq". */
   providerLabel: string;
+  /** False for FAITH's shared relay, which holds the key server-side. Default true. */
+  requiresKey?: boolean;
   /** Extra JSON fields for the request body (e.g. reasoning_effort for gpt-oss models). */
   extraBody?: Record<string, unknown>;
   /** Injected in tests. */
@@ -45,7 +47,7 @@ export class CloudEngine implements InferenceEngine {
   }
 
   isReady(): boolean {
-    return this.config.apiKey.length > 0;
+    return this.config.requiresKey === false || this.config.apiKey.length > 0;
   }
 
   async generate(messages: ChatMessage[], opts: GenerateOptions): Promise<GenerateResult> {
@@ -56,7 +58,7 @@ export class CloudEngine implements InferenceEngine {
     try {
       const res = await (this.config.fetchImpl ?? fetch)(`${this.config.baseUrl.replace(/\/$/, '')}/chat/completions`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json', authorization: `Bearer ${this.config.apiKey}` },
+        headers: { 'content-type': 'application/json', ...(this.config.apiKey ? { authorization: `Bearer ${this.config.apiKey}` } : {}) },
         body: JSON.stringify({
           model: this.config.model,
           messages: messages.map((m) => ({ role: m.role, content: m.content })),

@@ -190,6 +190,8 @@ export const SETTINGS = {
   onlineModel: 'online_model',
   /** Base URL for a custom OpenAI-compatible endpoint. */
   onlineBaseUrl: 'online_base_url',
+  /** 'dismissed' once the one-tap offer on Ask FAITH has been answered either way. */
+  onlineOffer: 'online_offer',
 } as const;
 
 export async function getSetting(db: SqlExecutor, key: string): Promise<string | null> {

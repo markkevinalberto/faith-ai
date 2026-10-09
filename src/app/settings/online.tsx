@@ -67,7 +67,7 @@ export default function OnlineAssistantSettings() {
       <Card padded={false} style={{ paddingHorizontal: SPACE.lg }}>
         <ToggleRow
           label="Use the online assistant"
-          description={s.hasKey ? 'Only when the internet is reachable. Every online answer is marked.' : 'Paste an API key below first.'}
+          description={provider.requiresKey && !s.hasKey ? 'Paste an API key below first.' : 'Only when the internet is reachable. Every online answer is marked.'}
           value={s.enabled}
           onValueChange={(v) => void save({ enabled: v })}
         />
@@ -76,13 +76,25 @@ export default function OnlineAssistantSettings() {
       <Section title="Service">
         <SegmentedControl
           options={[
-            { value: 'groq', label: 'Groq (free)' },
+            { value: 'faith', label: 'FAITH’s' },
+            { value: 'groq', label: 'Own Groq key' },
             { value: 'custom', label: 'Custom' },
           ]}
           value={s.provider}
           onChange={(v) => void save({ provider: v })}
         />
-        {s.provider === 'groq' ? (
+        {s.provider === 'faith' ? (
+          <Card style={{ gap: SPACE.sm }}>
+            <AppText variant="bodyStrong">{provider.models[0].label} through FAITH’s relay</AppText>
+            <AppText variant="body" tone="muted">
+              Nothing to set up: no account and no key. {provider.limits}
+            </AppText>
+            <AppText variant="caption" tone="muted">
+              {provider.privacy}
+            </AppText>
+            <Button title="Groq’s data policy" icon="open-outline" variant="ghost" size="sm" onPress={() => void Linking.openURL(provider.dataUrl as string)} style={{ alignSelf: 'flex-start' }} />
+          </Card>
+        ) : s.provider === 'groq' ? (
           <Card style={{ gap: SPACE.sm }}>
             <AppText variant="label">Model</AppText>
             <View accessibilityRole="radiogroup">
@@ -131,17 +143,21 @@ export default function OnlineAssistantSettings() {
         )}
       </Section>
 
-      <Section title="API key" hint={WEB ? 'Kept in this browser’s storage, not in FAITH’s database.' : 'Kept in your phone’s secure storage, not in FAITH’s database, and never shown again after saving.'}>
-        <Card style={{ gap: SPACE.md }}>
-          {s.hasKey ? <Banner tone="success" icon="key" message="A key is saved. Paste a new one to replace it." /> : null}
-          <TextField label={s.hasKey ? 'New API key' : 'API key'} value={key} onChangeText={setKey} secureTextEntry autoCapitalize="none" placeholder="Paste your key" />
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm }}>
-            <Button title="Save key" icon="checkmark" disabled={!key.trim()} onPress={() => void saveKey()} />
-            {s.hasKey ? <Button title="Remove key" icon="trash-outline" variant="danger" onPress={() => void save({ enabled: false }, '')} /> : null}
-          </View>
-          <Button title="Test connection" icon="flash-outline" variant="soft" loading={testing} disabled={!s.hasKey} onPress={() => void test()} />
-        </Card>
-      </Section>
+      {provider.requiresKey ? (
+        <Section title="API key" hint={WEB ? 'Kept in this browser’s storage, not in FAITH’s database.' : 'Kept in your phone’s secure storage, not in FAITH’s database, and never shown again after saving.'}>
+          <Card style={{ gap: SPACE.md }}>
+            {s.hasKey ? <Banner tone="success" icon="key" message="A key is saved. Paste a new one to replace it." /> : null}
+            <TextField label={s.hasKey ? 'New API key' : 'API key'} value={key} onChangeText={setKey} secureTextEntry autoCapitalize="none" placeholder="Paste your key" />
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm }}>
+              <Button title="Save key" icon="checkmark" disabled={!key.trim()} onPress={() => void saveKey()} />
+              {s.hasKey ? <Button title="Remove key" icon="trash-outline" variant="danger" onPress={() => void save({ enabled: false }, '')} /> : null}
+            </View>
+            <Button title="Test connection" icon="flash-outline" variant="soft" loading={testing} disabled={!s.hasKey} onPress={() => void test()} />
+          </Card>
+        </Section>
+      ) : (
+        <Button title="Test connection" icon="flash-outline" variant="soft" loading={testing} onPress={() => void test()} />
+      )}
 
       {notice ? <Banner tone={notice.tone} title={notice.title} message={notice.message} /> : null}
 

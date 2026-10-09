@@ -26,4 +26,7 @@ let rewritten = 0;
   }
 })(dist, out);
 fs.copyFileSync(path.join(__dirname, '..', 'vercel.json'), path.join(out, 'vercel.json'));
-console.log(`postexport-web: wrote ${out} (assets/node_modules -> assets/vendor, ${rewritten} file(s) rewritten)`);
+// The shared online assistant's relay (Vercel functions live in api/ next to the static site).
+const api = path.join(__dirname, '..', 'web', 'api');
+if (fs.existsSync(api)) fs.cpSync(api, path.join(out, 'api'), { recursive: true });
+console.log(`postexport-web: wrote ${out} (assets/node_modules -> assets/vendor, ${rewritten} file(s) rewritten${fs.existsSync(api) ? '; api/ relay included' : ''})`);

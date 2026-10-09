@@ -5,8 +5,10 @@
  * excerpts, and the same output guard. With no internet (or on any error) FAITH falls back to the
  * on-device model, so nothing stops working offline.
  *
- * Default provider: Groq's free plan (no card; inference data not retained by default; a zero-
- * retention switch in its console). Any other OpenAI-compatible endpoint can be set as "custom".
+ * Default provider: "FAITH's assistant", a relay on the FAITH website (web/api/chat/completions.js)
+ * that holds a Groq key server-side, so nobody has to create an account: one tap turns it on.
+ * People can instead use their own Groq key (free plan; inference data not retained by default; a
+ * zero-retention switch in its console) or any other OpenAI-compatible endpoint ("custom").
  */
 import * as Network from 'expo-network';
 import { useSyncExternalStore } from 'react';
@@ -18,7 +20,7 @@ import { getSecret, setSecret } from '../../services/secret';
 import { CloudEngine } from './cloudEngine';
 import type { InferenceEngine } from './types';
 
-export type ProviderId = 'groq' | 'custom';
+export type ProviderId = 'faith' | 'groq' | 'custom';
 
 export interface ProviderModel {
   id: string;
@@ -37,9 +39,25 @@ export interface OnlineProvider {
   dataUrl: string | null;
   limits: string;
   privacy: string;
+  /** False when the service holds the key itself (FAITH's relay). */
+  requiresKey: boolean;
 }
 
+/** FAITH's relay, deployed with the website; see web/api/chat/completions.js. */
+export const FAITH_RELAY_URL = 'https://faith-ai-web.vercel.app/api';
+
 export const PROVIDERS: Record<ProviderId, OnlineProvider> = {
+  faith: {
+    id: 'faith',
+    label: 'FAITH’s assistant',
+    baseUrl: FAITH_RELAY_URL,
+    models: [{ id: 'openai/gpt-oss-120b', label: 'GPT-OSS 120B', note: 'Through FAITH’s relay. No key or account needed.' }],
+    keyUrl: null,
+    dataUrl: 'https://console.groq.com/docs/your-data',
+    limits: 'Shared by everyone using FAITH, a few questions a minute each. When it is busy, FAITH answers on this device instead.',
+    privacy: 'Your question and the facts shown go to FAITH’s relay (hosted on Vercel in the United States), which passes them to Groq and keeps nothing. Groq says it does not keep or train on requests by default.',
+    requiresKey: false,
+  },
   groq: {
     id: 'groq',
     label: 'Groq',
@@ -53,6 +71,7 @@ export const PROVIDERS: Record<ProviderId, OnlineProvider> = {
     dataUrl: 'https://console.groq.com/docs/your-data',
     limits: 'Free plan: 30 requests a minute and 1,000 a day, no card needed.',
     privacy: 'Groq says it does not keep inference requests by default and does not train on them; you can turn on “Zero Data Retention” in its console. Data is processed in the United States.',
+    requiresKey: true,
   },
   custom: {
     id: 'custom',
@@ -63,6 +82,7 @@ export const PROVIDERS: Record<ProviderId, OnlineProvider> = {
     dataUrl: null,
     limits: 'Any service with an OpenAI-style /chat/completions endpoint, including one on your own computer.',
     privacy: 'Check that service’s own privacy terms before sending health information to it.',
+    requiresKey: true,
   },
 };
 
@@ -96,7 +116,7 @@ export async function loadOnlineSettings(db: SqlExecutor): Promise<OnlineSetting
         getSetting(db, SETTINGS.onlineBaseUrl),
         getSecret(KEY_NAME),
       ]);
-      const p: ProviderId = provider === 'custom' ? 'custom' : 'groq';
+      const p: ProviderId = provider === 'custom' || provider === 'groq' ? provider : 'faith';
       settings = { enabled: enabled === '1', provider: p, model: model || PROVIDERS[p].models[0]?.id || '', baseUrl: baseUrl || '', hasKey: !!key };
       emit();
       return settings;
@@ -155,26 +175,26 @@ function extraBodyFor(provider: ProviderId, model: string): Record<string, unkno
 export async function getOnlineEngine(db: SqlExecutor): Promise<InferenceEngine | null> {
   const s = await loadOnlineSettings(db);
   if (!s.enabled) return null;
-  const apiKey = await getSecret(KEY_NAME);
-  if (!apiKey) return null;
   const provider = PROVIDERS[s.provider];
+  const apiKey = provider.requiresKey ? await getSecret(KEY_NAME) : '';
+  if (provider.requiresKey && !apiKey) return null;
   const baseUrl = s.provider === 'custom' ? s.baseUrl.trim() : provider.baseUrl;
   const model = s.model.trim();
   if (!baseUrl || !model) return null;
   if (!(await isInternetReachable())) return null;
-  return new CloudEngine({ baseUrl, model, apiKey, providerLabel: provider.label, extraBody: extraBodyFor(s.provider, model) });
+  return new CloudEngine({ baseUrl, model, apiKey: apiKey ?? '', providerLabel: provider.label, requiresKey: provider.requiresKey, extraBody: extraBodyFor(s.provider, model) });
 }
 
 /** One tiny request to confirm the key and endpoint work. */
 export async function testOnlineAssistant(db: SqlExecutor): Promise<{ ok: boolean; message: string }> {
   const s = await loadOnlineSettings(db);
-  const apiKey = await getSecret(KEY_NAME);
-  if (!apiKey) return { ok: false, message: 'Paste an API key first.' };
   const provider = PROVIDERS[s.provider];
+  const apiKey = provider.requiresKey ? await getSecret(KEY_NAME) : '';
+  if (provider.requiresKey && !apiKey) return { ok: false, message: 'Paste an API key first.' };
   const baseUrl = s.provider === 'custom' ? s.baseUrl.trim() : provider.baseUrl;
   if (!baseUrl || !s.model.trim()) return { ok: false, message: 'Choose a model (and, for a custom service, enter its address).' };
   if (!(await isInternetReachable())) return { ok: false, message: 'No internet connection right now.' };
-  const engine = new CloudEngine({ baseUrl, model: s.model.trim(), apiKey, providerLabel: provider.label, extraBody: extraBodyFor(s.provider, s.model) });
+  const engine = new CloudEngine({ baseUrl, model: s.model.trim(), apiKey: apiKey ?? '', providerLabel: provider.label, requiresKey: provider.requiresKey, extraBody: extraBodyFor(s.provider, s.model) });
   try {
     const started = Date.now();
     const r = await engine.generate([{ role: 'user', content: 'Reply with the single word: ready' }], { maxTokens: 20, temperature: 0, timeoutMs: 20_000 });

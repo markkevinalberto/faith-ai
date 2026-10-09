@@ -12,6 +12,7 @@ import type { PriorTurn } from '@/ai/prompt';
 import { AnswerCard } from '@/components/AnswerCard';
 import { DemoBanner } from '@/components/AppChrome';
 import { OfflineBadge } from '@/components/OfflineBadge';
+import { OnlineOfferCard } from '@/components/OnlineOfferCard';
 import { VoiceButton, type VoicePhase } from '@/components/VoiceButton';
 import { SETTINGS, getSetting } from '@/db/repo/profiles';
 import { useApp, useProfile } from '@/state/AppState';
@@ -124,6 +125,7 @@ export default function Ask() {
         <ScrollView ref={scroll} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={styles.inner}>
             <DemoBanner />
+            <OnlineOfferCard />
             {turns.length === 0 ? (
               <View style={{ gap: SPACE.md }}>
                 <MascotCard

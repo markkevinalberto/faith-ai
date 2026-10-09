@@ -114,14 +114,20 @@ describe('the online assistant in Ask FAITH', () => {
 describe('when the online assistant is used', () => {
   beforeEach(() => resetOnlineSettingsForTests());
 
-  it('is off by default and needs a key', async () => {
+  it("is off by default; FAITH's relay needs no key once switched on", async () => {
     expect(await getOnlineEngine(db)).toBeNull();
     await saveOnlineSettings(db, { enabled: true });
-    expect(await getOnlineEngine(db)).toBeNull();
-    await saveOnlineSettings(db, {}, 'test-key');
     const engine = await getOnlineEngine(db);
     expect(engine?.runsOnDevice).toBe(false);
-    expect(engine?.label).toBe('openai/gpt-oss-120b · Groq (online)');
+    expect(engine?.isReady()).toBe(true);
+    expect(engine?.label).toBe('openai/gpt-oss-120b · FAITH’s assistant (online)');
+  });
+
+  it('an own Groq key is required for the Groq option', async () => {
+    await saveOnlineSettings(db, { enabled: true, provider: 'groq' });
+    expect(await getOnlineEngine(db)).toBeNull();
+    await saveOnlineSettings(db, {}, 'test-key');
+    expect((await getOnlineEngine(db))?.label).toBe('openai/gpt-oss-120b · Groq (online)');
   });
 
   it('needs an address and a model for a custom service', async () => {
@@ -132,7 +138,7 @@ describe('when the online assistant is used', () => {
   });
 
   it('removing the key switches it off', async () => {
-    await saveOnlineSettings(db, { enabled: true }, 'test-key');
+    await saveOnlineSettings(db, { enabled: true, provider: 'groq' }, 'test-key');
     expect(await getOnlineEngine(db)).not.toBeNull();
     await saveOnlineSettings(db, { enabled: false }, '');
     expect(await getOnlineEngine(db)).toBeNull();

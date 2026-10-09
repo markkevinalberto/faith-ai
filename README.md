@@ -48,7 +48,7 @@ npm run export:web   # static site in dist/; deploy that folder (vercel deploy d
 
 ### Optional online assistant (hybrid)
 
-Off by default. In Settings → Online assistant, a person can add their own API key for Groq's free plan (or any OpenAI-compatible service). When it is on and the internet is reachable, Ask FAITH and FAITH's notes send the same prompt the on-device model would get (question, computed facts, library excerpts, recent turns) to the bigger online model, run its answer through the same guard, and label it "online". Offline, or if the service fails, everything falls back to the on-device model. See DISCLOSURES.md for what is sent and Groq's data handling.
+Off by default; one tap to turn on (an offer card in Ask FAITH). "FAITH's assistant" calls a small relay deployed with this website (`web/api/chat/completions.js`), which holds a Groq key as a Vercel environment variable (`GROQ_API_KEY`) and stores nothing; people can instead use their own Groq key or any OpenAI-compatible service in Settings → Online assistant. When it is on and the internet is reachable, Ask FAITH and FAITH's notes send the same prompt the on-device model would get (question, computed facts, library excerpts, recent turns) to the bigger online model, run its answer through the same guard, and label it "online". Offline, or if the service fails, everything falls back to the on-device model. See DISCLOSURES.md for what is sent and Groq's data handling.
 
 **Why local beats cloud here:**
 - Health records, voice and photos of prescriptions never leave the phone.
