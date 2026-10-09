@@ -31,6 +31,8 @@ function LabForm({ id, initial: t }: { id?: string; initial: LabTest | null }) {
   const { db, timeZone, locale } = useApp();
   const run = useAction();
   const [name, setName] = useState(t?.name ?? '');
+  // New tests: "I already have the report" skips the booking and goes straight to entering values.
+  const [haveReport, setHaveReport] = useState(false);
   const [scheduled, setScheduled] = useState(t ? !!t.scheduledAt : true);
   const [when, setWhen] = useState(() => (t?.scheduledAt ? new Date(t.scheduledAt) : defaultTime()));
   const [location, setLocation] = useState(t?.location ?? '');
@@ -48,42 +50,53 @@ function LabForm({ id, initial: t }: { id?: string; initial: LabTest | null }) {
       return;
     }
     setSaving(true);
+    const booked = scheduled && !haveReport;
     const input = {
       name,
       orderedBy,
       location,
-      scheduledAt: scheduled ? when.toISOString() : null,
-      timezone: scheduled ? timeZone : null,
+      scheduledAt: booked ? when.toISOString() : null,
+      timezone: booked ? timeZone : null,
       fastingRequired: fasting,
       preparationNotes: prep,
-      status: t?.status ?? 'scheduled',
-      reminderMinutesBefore: scheduled && reminder >= 0 ? reminder : null,
+      status: t?.status ?? (haveReport ? ('completed' as const) : ('scheduled' as const)),
+      reminderMinutesBefore: booked && reminder >= 0 ? reminder : null,
       notes,
     };
+    const created = { id: null as string | null };
     const ok = await run(async () => {
       if (id) await updateLabTest(db, profile.id, id, input);
-      else await createLabTest(db, profile.id, input);
+      else created.id = await createLabTest(db, profile.id, input);
     });
     setSaving(false);
-    if (ok) router.back();
+    if (!ok) return;
+    if (created.id && haveReport) router.replace({ pathname: '/care/lab/result', params: { labId: created.id } });
+    else router.back();
   };
 
   return (
-    <Screen edges={[]} keyboard footer={<FormFooter><Button title={id ? 'Save changes' : 'Add lab test'} icon="checkmark" size="lg" loading={saving} onPress={() => void save()} /></FormFooter>}>
+    <Screen edges={[]} keyboard footer={<FormFooter><Button title={id ? 'Save changes' : haveReport ? 'Next: enter the results' : 'Add lab test'} icon={haveReport ? 'arrow-forward' : 'checkmark'} size="lg" loading={saving} onPress={() => void save()} /></FormFooter>}>
       <Stack.Screen options={{ title: id ? 'Edit lab test' : 'New lab test' }} />
       <TextField label="Test name" value={name} onChangeText={setName} error={error} maxLength={100} />
       {!id ? <ChipSelect options={LAB_SUGGESTIONS.map((s) => ({ value: s, label: s }))} selected={[name]} onToggle={setName} /> : null}
-      <Card padded={false} style={{ paddingHorizontal: SPACE.lg }}>
-        <ToggleRow label="Date is booked" value={scheduled} onValueChange={setScheduled} />
-      </Card>
-      {scheduled ? <DateTimeField label="Date and time" value={when} onChange={setWhen} mode="datetime" locale={locale} /> : null}
+      {!id ? (
+        <Card padded={false} style={{ paddingHorizontal: SPACE.lg }}>
+          <ToggleRow label="I already have the report" description="Skip the booking. You’ll type the values in on the next screen." value={haveReport} onValueChange={setHaveReport} />
+        </Card>
+      ) : null}
+      {!haveReport ? (
+        <Card padded={false} style={{ paddingHorizontal: SPACE.lg }}>
+          <ToggleRow label="Date is booked" value={scheduled} onValueChange={setScheduled} />
+        </Card>
+      ) : null}
+      {scheduled && !haveReport ? <DateTimeField label="Date and time" value={when} onChange={setWhen} mode="datetime" locale={locale} /> : null}
       <TextField label="Location (optional)" value={location} onChangeText={setLocation} maxLength={120} />
       <TextField label="Ordered by (optional)" value={orderedBy} onChangeText={setOrderedBy} autoCapitalize="words" maxLength={80} />
       <Card padded={false} style={{ paddingHorizontal: SPACE.lg }}>
         <ToggleRow label="Fasting required" description="Only if your clinic or lab told you so." value={fasting} onValueChange={setFasting} />
       </Card>
       <TextField label="Preparation notes" value={prep} onChangeText={setPrep} multiline placeholder="Copy the instructions from your clinic or lab" maxLength={1000} />
-      {scheduled ? <ChipSelect label="Reminder" options={LAB_REMINDERS} selected={[reminder]} onToggle={setReminder} /> : null}
+      {scheduled && !haveReport ? <ChipSelect label="Reminder" options={LAB_REMINDERS} selected={[reminder]} onToggle={setReminder} /> : null}
       <TextField label="Notes" value={notes} onChangeText={setNotes} multiline maxLength={1000} />
     </Screen>
   );

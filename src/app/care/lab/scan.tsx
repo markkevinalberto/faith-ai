@@ -74,10 +74,10 @@ export default function ScanLabReport() {
     setPhase({ step: 'pick' });
   };
 
+  /** Saves the ticked rows. With none ticked, the test and photo are still saved so values can be typed in. */
   const save = async () => {
     if (phase.step !== 'review') return;
     const rows = phase.rows.filter((_, i) => selected.has(i));
-    if (rows.length === 0) return;
     setSaving(true);
     const date = localDateKey(resultDate, timeZone);
     let testId: string | null = null;
@@ -131,7 +131,7 @@ export default function ScanLabReport() {
         keyboard
         footer={
           <FormFooter>
-            <Button title={`Save ${selected.size} result${selected.size === 1 ? '' : 's'}`} icon="checkmark" size="lg" loading={saving} disabled={selected.size === 0} onPress={() => void save()} />
+            <Button title={selected.size === 0 ? 'Save photo and add results by hand' : `Save ${selected.size} result${selected.size === 1 ? '' : 's'}`} icon="checkmark" size="lg" loading={saving} onPress={() => void save()} />
             <Button title="Scan again" icon="camera-outline" variant="ghost" onPress={retake} />
           </FormFooter>
         }>
@@ -148,7 +148,7 @@ export default function ScanLabReport() {
           </View>
         </View>
         {rows.length === 0 ? (
-          <Banner tone="info" message="No result rows could be read. Try a sharper photo of just the results table, or add the results by hand." />
+          <Banner tone="info" message="No result rows could be read. You can still save the photo and type the values in on the next screen, or try a sharper photo of just the results table. Tap “Show scanned text” to see what the phone read." />
         ) : (
           <Card padded={false}>
             {rows.map((r, i) => {
@@ -167,7 +167,7 @@ export default function ScanLabReport() {
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, flexWrap: 'wrap' }}>
                       <AppText variant="bodyStrong">{r.analyte}</AppText>
                       {r.flag ? <Pill label={`Flag ${r.flag}`} tone="warning" /> : null}
-                      {ai ? <Pill label="On-device AI" tone="primary" /> : null}
+                      {ai ? <Pill label="On-device AI" tone="primary" /> : r.confidence === 'low' ? <Pill label="Check this row" tone="warning" /> : null}
                     </View>
                     <AppText variant="body">{rowValue(r)}</AppText>
                     {r.refText ? (

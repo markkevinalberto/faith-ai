@@ -47,7 +47,6 @@ export default function Ask() {
   }, [profile.id]);
 
   useEffect(() => {
-    if (Platform.OS === 'web') return;
     void getSetting(db, SETTINGS.activeModelId).then((id) => {
       if (id && engineStore.get().status === 'none') void engineStore.loadById(id);
     });

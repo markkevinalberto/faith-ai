@@ -12,6 +12,7 @@ Everything FAITH uses to work, and how it was built. Last updated 2026-10-09.
 | **Whisper base.en** (147,964,211 bytes, SHA-256 `a03779c8…6d002`) and **tiny.en** (77,704,715 bytes, SHA-256 `921e4cf8…b1f`), ggml format | Speech-to-text for voice questions and voice logging | MIT (OpenAI); ggml conversion by the whisper.cpp project | On the device CPU |
 | **llama.cpp** through **llama.rn 0.12.9** | Native runtime for the chat and embedding models (GGUF loading, sampling, JSON-schema constrained output) | MIT | On the device |
 | **whisper.cpp** through **whisper.rn 0.7.4** | Native runtime for Whisper | MIT | On the device |
+| **llama.cpp compiled to WebAssembly** through **wllama 3.8.1** | Runs the same Qwen2.5 and all-MiniLM-L6-v2 GGUF files in the browser build, inside a Web Worker (multi-threaded when the page is served with cross-origin isolation headers) | MIT | In the browser. Model files are kept in the browser's private origin storage. On Safari, wllama loads a compatibility build of its worker from jsDelivr; other browsers use the WebAssembly file served with the site |
 | **Google ML Kit Text Recognition v2** (bundled model, `com.google.mlkit:text-recognition` 16.0.1) through **@react-native-ml-kit/text-recognition 2.0.0** | Reads text from photos of medicine labels and lab reports | ML Kit Terms of Service (free); wrapper MIT | On the device. The model ships inside the app, so it needs no download and no network |
 
 - Models come from the official `Qwen/Qwen2.5-*-Instruct-GGUF` and `ggerganov/whisper.cpp` repositories and the `second-state/All-MiniLM-L6-v2-Embedding-GGUF` repository on Hugging Face. Each download is verified on the phone by size, file header (GGUF or ggml) and MD5. The MD5 values were matched to the published SHA-256 on 2026-10-09.
@@ -26,7 +27,7 @@ Everything FAITH uses to work, and how it was built. Last updated 2026-10-09.
   - semantic search (embeddings)
   - voice transcription (Whisper)
   - label and lab-report scanning (ML Kit OCR, parsers, and grounded extraction by the on-device LLM)
-- **Network use:** the only requests FAITH can make are the model downloads that you start yourself from Settings → On-device AI (to huggingface.co). They send no health data. You can also import model files from phone storage with no network at all.
+- **Network use:** the only requests FAITH can make are the model downloads that you start yourself from Settings → On-device AI (to huggingface.co). They send no health data. You can also import model files from phone storage with no network at all. The browser build downloads the same files into the browser's private storage; voice and scanning are not part of the browser build.
 
 ## Frameworks and libraries
 

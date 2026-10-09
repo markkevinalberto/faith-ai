@@ -18,6 +18,7 @@ const STACK = [
   'expo-notifications (local only), expo-local-authentication (app lock)',
   'llama.rn 0.12.9 — React Native bindings for llama.cpp (on-device answers and embeddings)',
   'whisper.rn 0.7.4 — React Native bindings for whisper.cpp (on-device speech-to-text)',
+  'wllama 3.8.1 — llama.cpp compiled to WebAssembly (browser build: answers and semantic search)',
   'Google ML Kit Text Recognition v2, bundled model (on-device label and report reading) via @react-native-ml-kit/text-recognition',
   '@fugood/react-native-audio-pcm-stream (microphone, in memory), expo-image-picker (camera), expo-network (offline badge)',
   'react-native-svg (charts), expo-file-system, expo-document-picker, expo-sharing',

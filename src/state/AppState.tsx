@@ -105,8 +105,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     deleteAllDocuments();
     clearExportCache();
     if (!keepModels) {
-      const { deleteAllModels } = await import('../ai/inference/modelManager');
-      deleteAllModels();
+      const { modelStore } = await import('../ai/inference/modelStore');
+      await modelStore.deleteAll();
     }
   }, []);
 

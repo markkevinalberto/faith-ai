@@ -60,6 +60,32 @@ describe('lab report parser', () => {
     expect(rows[4]).toMatchObject({ valueNum: 1.1, refLow: 0.6, refHigh: 1.2 });
   });
 
+  it('rebuilds rows when the value is printed on the line after the name', () => {
+    const rows = parseLabReport('HbA1c\n7.2 %\n4.0 - 5.6\nLDL Cholesterol\n104 mg/dL\nCreatinine\n1.1 mg/dL (0.6-1.2)');
+    expect(rows.map((r) => [r.analyte, r.valueNum, r.confidence])).toEqual([
+      ['HbA1c', 7.2, 'low'],
+      ['LDL Cholesterol', 104, 'low'],
+      ['Creatinine', 1.1, 'low'],
+    ]);
+    expect(rows[0]).toMatchObject({ unit: '%', refLow: 4, refHigh: 5.6 });
+    expect(rows[2]).toMatchObject({ refLow: 0.6, refHigh: 1.2 });
+  });
+
+  it('pairs a column of names with a column of values read separately by OCR', () => {
+    const rows = parseLabReport('Test\nHbA1c\nGlucose, Fasting\nLDL Cholesterol\nResult\n7.2 %\n126 mg/dL 70-99 H\n104 mg/dL');
+    expect(rows.map((r) => [r.analyte, r.valueNum, r.unit])).toEqual([
+      ['HbA1c', 7.2, '%'],
+      ['Glucose, Fasting', 126, 'mg/dL'],
+      ['LDL Cholesterol', 104, 'mg/dL'],
+    ]);
+    expect(rows[1]).toMatchObject({ refLow: 70, refHigh: 99, flag: 'H', confidence: 'low' });
+  });
+
+  it('does not pair header or patient lines with stray numbers', () => {
+    expect(parseLabReport('Patient: Test Person\n58\nPage\n1 of 2\nDate\n10/01/2026')).toEqual([]);
+    expect(parseLabReport(REPORT).every((r) => r.confidence === 'high')).toBe(true);
+  });
+
   it('strips dot leaders from test names', () => {
     expect(parseLabReport('Thyroid Stimulating Hormone ......... 2.1 mIU/L ( 0.4 - 4.0 )')[0]).toMatchObject({ analyte: 'Thyroid Stimulating Hormone', valueNum: 2.1, refLow: 0.4, refHigh: 4 });
   });

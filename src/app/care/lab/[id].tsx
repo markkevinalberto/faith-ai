@@ -100,6 +100,7 @@ export default function LabDetail() {
             })}
           </Card>
         )}
+        <Button title="Add a result from the report" icon="add" variant="soft" onPress={() => router.push({ pathname: '/care/lab/result', params: { labId: t.id } })} />
         <AppText variant="caption" tone="subtle">
           Values and ranges are shown exactly as you entered them from the report. FAITH doesn’t interpret lab results — your clinician does.
         </AppText>

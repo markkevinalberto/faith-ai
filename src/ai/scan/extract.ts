@@ -124,11 +124,12 @@ export async function extractLabel(ocrText: string, engine: InferenceEngine | nu
 
 /** OCR rows that look like results (a word and a number) but the parser could not read. */
 export function unparsedCandidateRows(ocrText: string, parsed: LabRowDraft[]): string[] {
-  const used = new Set(parsed.map((r) => r.sourceLine));
+  // Rows rebuilt from several lines carry the joined text, so exclude any line contained in one.
+  const consumed = (l: string) => parsed.some((r) => r.sourceLine === l || r.sourceLine.includes(l));
   return ocrText
     .split(/\r?\n/)
     .map((l) => l.replace(/\s+/g, ' ').trim())
-    .filter((l) => l && !used.has(l) && /[A-Za-z]{2,}/.test(l) && /\d/.test(l) && !/\b(page|date|tel|phone|age|dob|id|no\.)\b/i.test(l))
+    .filter((l) => l && !consumed(l) && /[A-Za-z]{2,}/.test(l) && /\d/.test(l) && !/\b(page|date|tel|phone|age|dob|id|no\.)\b/i.test(l))
     .slice(0, 25);
 }
 
@@ -180,6 +181,7 @@ export async function extractLabReport(ocrText: string, engine: InferenceEngine 
         refText: ref.text,
         flag: (flag === 'H' || flag === 'L') && new RegExp(`\\b${flag}\\b`, 'i').test(line) ? flag : null,
         sourceLine: line,
+        confidence: 'low',
       });
       known.add(normalizeForMatch(analyte));
       meta.aiFilled.push(analyte);

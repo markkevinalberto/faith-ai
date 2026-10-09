@@ -31,6 +31,17 @@ Every AI feature runs on the phone and keeps working in airplane mode. Every mod
 | **Scan labels and lab reports** | ML Kit text recognition (model bundled in the app), then layout reconstruction and tested parsers. The on-device LLM fills only missing fields, with JSON-schema constrained output, and **every value must appear in the scanned text**. You review everything before saving | Manual entry |
 | **Offline proof badge** | Live connection and airplane-mode status next to the local components that are running (LLM, search, voice, OCR) | Not applicable |
 
+### The same models in a browser
+
+The web build runs the same Qwen2.5 and all-MiniLM-L6-v2 GGUF files through llama.cpp compiled to WebAssembly ([wllama](https://github.com/ngxson/wllama)), inside a Web Worker. Settings → On-device AI downloads them into the browser's private storage; Ask FAITH then uses the same router, retrieval, guard and semantic search as the phone. Voice and scanning stay in the Android app. Measured in Chromium on a 16-thread desktop with 8 WebAssembly threads: Qwen2.5 0.5B at about 42 tokens/s.
+
+```bash
+npm run web                        # dev server, already cross-origin isolated (metro.config.js)
+npx expo export --platform web     # static site in dist/; serve with the headers in vercel.json
+```
+
+Multi-threaded WebAssembly needs `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: credentialless` on every response; without them wllama falls back to a single thread.
+
 **Why local beats cloud here:**
 - Health records, voice and photos of prescriptions never leave the phone.
 - It works in clinics, on the road and during outages.
@@ -66,6 +77,7 @@ npx eas-cli@latest build -p android --profile preview
 | `expo-doctor` | Every check passes except the React Native Directory metadata check. It flags `@react-native-ml-kit/text-recognition` (untested on the New Architecture) and `whisper.rn` and `@fugood/react-native-audio-pcm-stream` (no metadata). Legacy native modules run through React Native's interop layer, and the Gradle plugin adds their missing namespaces. Confirm on the device |
 | Web UI walkthrough | Onboarding → sample data → Home → Vitals chart and target band → add reading → safety card → Ask (deterministic answer and dose-change refusal) → all settings screens render |
 | EAS preview build | Build 4 (commit `70428b5`, 2026-10-09) is the current preview APK: core app, LLM, scan, voice, semantic search, offline badge, and the database fix. Builds 1–3 either failed to open the database on the phone or failed to bundle |
+| Browser build (Chromium, 2026-10-09) | Qwen2.5 0.5B and all-MiniLM-L6-v2 downloaded into browser storage and ran through llama.cpp WebAssembly: "Summarize my glucose this week" produced a generated explanation that passed the output guard at 42 tok/s; "Did I ever feel dizzy or lightheaded?" found the "felt shaky after a long walk" note by meaning |
 | **Physical Android device** | **Build 4 runs on a physical Android phone (2026-10-09).** The encrypted database opens, the sample profile loads, and semantic search works end to end: the all-MiniLM-L6-v2 model runs through llama.rn and the Ask screen reports records matched by meaning. The Whisper and embedding models downloaded and passed their checksum checks. Builds 1–3 failed at startup because expo-sqlite's exclusive transactions open a second connection that never receives the SQLCipher key; fixed in `src/db/singleConnection.ts`, with R8 minification turned off. Still to check on the phone: Qwen generation and its speed, voice transcription, label and report scanning, notifications and biometrics. Follow the checklist in the device-testing doc |
 
 ## Project structure

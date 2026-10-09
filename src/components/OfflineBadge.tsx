@@ -44,7 +44,6 @@ export function OfflineBadge() {
   const [installed, setInstalled] = useState({ embedding: false, speech: false });
 
   useEffect(() => {
-    if (Platform.OS === 'web') return;
     let live = true;
     void Promise.all([localModels.hasModel('embedding'), localModels.hasModel('speech')]).then(([embedding, speech]) => live && setInstalled({ embedding, speech }));
     return () => {
@@ -53,23 +52,21 @@ export function OfflineBadge() {
   }, [helpers.embedding.status, helpers.speech.status]);
 
   const offline = connection === 'airplane' || connection === 'offline';
-  const headline =
-    Platform.OS === 'web'
-      ? 'Web preview · records and offline library only'
-      : offline
-        ? `${connection === 'airplane' ? 'Airplane mode' : 'Offline'} · AI running on this phone`
-        : 'Private · AI runs on this phone, nothing is sent';
+  // The browser build runs the chat and embedding models through llama.cpp WebAssembly.
+  const here = Platform.OS === 'web' ? 'in this browser' : 'on this phone';
+  const headline = offline ? `${connection === 'airplane' ? 'Airplane mode' : 'Offline'} · AI running ${here}` : `Private · AI runs ${here}, nothing is sent`;
 
   const llm = engine.status === 'ready' && engine.modelId ? getModelSpec(engine.modelId) : null;
-  const parts: { key: string; label: string; on: boolean }[] =
-    Platform.OS === 'web'
-      ? []
+  const parts: { key: string; label: string; on: boolean }[] = [
+    { key: 'llm', label: llm ? `${llm.family} ${llm.parameters}` : engine.status === 'loading' ? 'LLM loading…' : 'LLM off', on: !!llm },
+    { key: 'search', label: 'Semantic search', on: helpers.embedding.status === 'ready' || installed.embedding },
+    ...(Platform.OS === 'web'
+      ? [{ key: 'phone', label: 'Voice & scan · phone app', on: false }]
       : [
-          { key: 'llm', label: llm ? `${llm.family} ${llm.parameters}` : engine.status === 'loading' ? 'LLM loading…' : 'LLM off', on: !!llm },
-          { key: 'search', label: 'Semantic search', on: helpers.embedding.status === 'ready' || installed.embedding },
           { key: 'voice', label: 'Whisper voice', on: helpers.speech.status === 'ready' || installed.speech },
           { key: 'ocr', label: 'ML Kit scan', on: true },
-        ];
+        ]),
+  ];
 
   return (
     <Pressable

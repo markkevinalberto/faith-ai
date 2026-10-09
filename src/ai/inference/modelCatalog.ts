@@ -179,23 +179,36 @@ export interface Compatibility {
   canInstall: boolean;
 }
 
-/** Pure compatibility check (tested). Native values are gathered in modelManager. */
+/**
+ * Pure compatibility check (tested). Native values are gathered in modelManager; the browser's in
+ * modelStore.web. In a browser the chat and embedding models run through llama.cpp compiled to
+ * WebAssembly; speech stays on the phone because whisper.cpp is not part of the web build.
+ */
 export function assessCompatibility(spec: ModelSpec, device: DeviceProfile, alreadyInstalled: boolean): Compatibility {
   const reasons: string[] = [];
-  if (device.platform === 'web') return { verdict: 'unsupported', reasons: ['On-device models need the Android or iOS app.'], canInstall: false };
-  const abiOk = device.cpuArchitectures.length === 0 || device.cpuArchitectures.some((a) => a === 'arm64-v8a' || a === 'x86_64' || a === 'arm64');
-  const runtime = spec.kind === 'speech' ? 'whisper.cpp' : 'llama.cpp';
-  if (!abiOk) return { verdict: 'unsupported', reasons: [`This processor architecture is not supported by ${runtime} (needs 64-bit ARM or x86_64).`], canInstall: false };
+  const web = device.platform === 'web';
+  if (web && spec.kind === 'speech') {
+    return { verdict: 'unsupported', reasons: ['Voice runs in the Android app. whisper.cpp is not part of the browser build.'], canInstall: false };
+  }
+  if (web) {
+    reasons.push('Runs in this browser with WebAssembly on the CPU, from the same model file as the phone app. Expect it to be slower than a phone.');
+  } else {
+    const abiOk = device.cpuArchitectures.length === 0 || device.cpuArchitectures.some((a) => a === 'arm64-v8a' || a === 'x86_64' || a === 'arm64');
+    const runtime = spec.kind === 'speech' ? 'whisper.cpp' : 'llama.cpp';
+    if (!abiOk) return { verdict: 'unsupported', reasons: [`This processor architecture is not supported by ${runtime} (needs 64-bit ARM or x86_64).`], canInstall: false };
+  }
   let verdict: CompatibilityVerdict = 'supported';
   if (device.totalMemoryBytes !== null) {
     if (device.totalMemoryBytes < spec.minRamBytes) {
       verdict = 'not_recommended';
-      reasons.push(`Your phone has ${formatBytes(device.totalMemoryBytes)} RAM; this model needs at least ${formatBytes(spec.minRamBytes)}. It may be very slow or close the app.`);
+      reasons.push(
+        `${web ? 'This computer reports' : 'Your phone has'} ${formatBytes(device.totalMemoryBytes)} RAM; this model needs at least ${formatBytes(spec.minRamBytes)}. It may be very slow or ${web ? 'make the page unresponsive' : 'close the app'}.`,
+      );
     } else if (device.totalMemoryBytes >= spec.recommendedRamBytes) {
       verdict = 'recommended';
     }
   } else {
-    reasons.push('Could not read device memory.');
+    reasons.push(web ? 'This browser does not report memory. If the page becomes unresponsive, try the smaller model.' : 'Could not read device memory.');
   }
   if (!device.isPhysicalDevice) reasons.push('Emulators run models slowly; test on a real phone.');
   let canInstall = true;

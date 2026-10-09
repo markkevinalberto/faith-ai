@@ -30,24 +30,28 @@ export const engineStore = {
     return () => listeners.delete(listener);
   },
   async load(spec: ModelSpec): Promise<void> {
-    if (Platform.OS === 'web') {
-      set({ status: 'error', error: 'On-device models need the Android or iOS app.' });
-      return;
-    }
     if (spec.kind !== 'llm' || state.status === 'loading') return;
     if (state.status === 'ready' && state.modelId === spec.id) return;
     await engineStore.unload();
     set({ status: 'loading', modelId: spec.id, progress: 0, error: null });
     try {
-      const { modelFile, isInstalled } = await import('./modelManager');
-      if (!isInstalled(spec)) throw new Error('Model file is not installed.');
-      const { LlamaRnEngine } = await import('./llamaEngine');
-      const engine = await LlamaRnEngine.load({
-        id: spec.id,
-        label: `${spec.name} · ${spec.quantization} · llama.cpp on this device`,
-        modelPath: modelFile(spec.fileName).uri,
-        onProgress: (p) => set({ progress: p }),
-      });
+      const { modelStore } = await import('./modelStore');
+      if (!(await modelStore.isInstalled(spec))) throw new Error('Model file is not installed.');
+      const onProgress = (p: number) => set({ progress: p });
+      let engine: InferenceEngine;
+      if (Platform.OS === 'web') {
+        // Same GGUF file, run by llama.cpp compiled to WebAssembly.
+        const { WllamaEngine } = await import('./webLlama');
+        engine = await WllamaEngine.load({ spec, onProgress });
+      } else {
+        const { LlamaRnEngine } = await import('./llamaEngine');
+        engine = await LlamaRnEngine.load({
+          id: spec.id,
+          label: `${spec.name} · ${spec.quantization} · llama.cpp on this device`,
+          modelPath: await modelStore.source(spec),
+          onProgress,
+        });
+      }
       set({ status: 'ready', engine, progress: 100 });
     } catch (e) {
       set({ status: 'error', engine: null, error: e instanceof Error ? e.message : String(e) });

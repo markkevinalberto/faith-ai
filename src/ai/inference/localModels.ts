@@ -62,15 +62,17 @@ class LlamaRnEmbedder implements Embedder {
   }
 }
 
-let embedder: LlamaRnEmbedder | null = null;
+let embedder: (Embedder & { release(): Promise<void> }) | null = null;
 let embedderLoading: Promise<Embedder | null> | null = null;
 let whisper: WhisperContext | null = null;
 let whisperLoading: Promise<WhisperContext | null> | null = null;
 
 async function installedSpec(kind: HelperKind): Promise<ModelSpec | null> {
-  if (Platform.OS === 'web') return null;
-  const { isInstalled } = await import('./modelManager');
-  return modelsOfKind(kind).find(isInstalled) ?? null;
+  // Whisper is not part of the browser build; the embedding model is (through WebAssembly).
+  if (Platform.OS === 'web' && kind === 'speech') return null;
+  const { modelStore } = await import('./modelStore');
+  for (const spec of modelsOfKind(kind)) if (await modelStore.isInstalled(spec)) return spec;
+  return null;
 }
 
 async function loadEmbedder(): Promise<Embedder | null> {
@@ -78,20 +80,25 @@ async function loadEmbedder(): Promise<Embedder | null> {
   if (!spec) return null;
   set('embedding', { status: 'loading', modelId: spec.id, error: null });
   try {
-    const { modelFile } = await import('./modelManager');
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { initLlama } = require('llama.rn') as LlamaModule;
-    const ctx = await initLlama({
-      model: modelFile(spec.fileName).uri,
-      embedding: true,
-      pooling_type: 'mean',
-      n_ctx: spec.contextLength,
-      n_batch: spec.contextLength,
-      n_ubatch: spec.contextLength,
-      n_gpu_layers: 0,
-      use_mlock: false,
-    });
-    embedder = new LlamaRnEmbedder(`llama.rn:${spec.id}`, ctx);
+    if (Platform.OS === 'web') {
+      const { WllamaEmbedder } = await import('./webLlama');
+      embedder = await WllamaEmbedder.load({ spec });
+    } else {
+      const { modelStore } = await import('./modelStore');
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { initLlama } = require('llama.rn') as LlamaModule;
+      const ctx = await initLlama({
+        model: await modelStore.source(spec),
+        embedding: true,
+        pooling_type: 'mean',
+        n_ctx: spec.contextLength,
+        n_batch: spec.contextLength,
+        n_ubatch: spec.contextLength,
+        n_gpu_layers: 0,
+        use_mlock: false,
+      });
+      embedder = new LlamaRnEmbedder(`llama.rn:${spec.id}`, ctx);
+    }
     set('embedding', { status: 'ready' });
     return embedder;
   } catch (e) {
@@ -105,10 +112,10 @@ async function loadWhisper(): Promise<WhisperContext | null> {
   if (!spec) return null;
   set('speech', { status: 'loading', modelId: spec.id, error: null });
   try {
-    const { modelFile } = await import('./modelManager');
+    const { modelStore } = await import('./modelStore');
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { initWhisper } = require('whisper.rn/index') as WhisperModule;
-    whisper = await initWhisper({ filePath: modelFile(spec.fileName).uri, useGpu: false });
+    whisper = await initWhisper({ filePath: await modelStore.source(spec), useGpu: false });
     set('speech', { status: 'ready' });
     return whisper;
   } catch (e) {
@@ -149,7 +156,7 @@ export const localModels = {
       whisperLoading = null;
     });
     const ctx = await whisperLoading;
-    if (!ctx) throw new Error(state.speech.error ?? 'No voice model is installed. Download one in Settings → On-device AI.');
+    if (!ctx) throw new Error(Platform.OS === 'web' ? 'Voice runs in the Android app.' : (state.speech.error ?? 'No voice model is installed. Download one in Settings → On-device AI.'));
     const audio = pcm.buffer.slice(pcm.byteOffset, pcm.byteOffset + pcm.byteLength) as ArrayBuffer;
     const { promise } = ctx.transcribeData(audio, { language: 'en', maxThreads: 4 });
     const result = await promise;
