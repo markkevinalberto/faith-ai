@@ -54,12 +54,32 @@ Run these on the physical phone and record the results. They can't be verified o
 - [ ] In airplane mode, Ask FAITH with "Summarize my glucose this week" shows a **Generated explanation · on this device** block above the record facts.
 - [ ] "I missed my metformin, should I take two?" is refused and the model is not called.
 
+**Scan, voice, semantic search, offline badge** (all in airplane mode once the models are installed)
+- [ ] The Ask header badge reads **"Airplane mode · AI running on this phone"**. The LLM, Semantic search, Whisper voice and ML Kit scan pills are ticked.
+- [ ] Install **all-MiniLM-L6-v2**, then ask "Did I ever feel dizzy or lightheaded?" on the sample profile. The note "Felt shaky after a long walk" appears, along with the caption "matched by meaning".
+- [ ] Install **Whisper base.en**, tap the mic in Ask, say "Summarize my glucose this week" and tap stop.
+  - The first tap asks for microphone permission.
+  - The transcript becomes the question, and the answer appears.
+- [ ] Vitals → + → mic → "blood pressure 130 over 85, pulse 72" fills systolic, diastolic and pulse. Nothing is saved until **Save reading**.
+- [ ] Medications → scan icon → photograph a printed label.
+  - The first tap asks for camera permission.
+  - The review shows the name, strength and instructions, with the OCR time.
+  - **Use these details** pre-fills the form with the "Filled from your scan" banner.
+- [ ] Care plan → Lab tests → **Scan report** on a printed table.
+  - Rows are listed with checkboxes.
+  - Saving creates a completed lab test. The photo is attached if "Keep the photo" is on.
+- [ ] With an LLM loaded, scan a label with a smudged or missing line. Fields filled by the model show **"Filled by on-device AI"**. Anything not printed is listed as ignored.
+
 ## 4. Model compatibility
 
 | Model | File | Minimum RAM | Recommended RAM | Notes |
 |---|---|---|---|---|
 | Qwen2.5 1.5B Instruct Q4_K_M | 1.12 GB | 4 GB | 6 GB or more | Best wording |
 | Qwen2.5 0.5B Instruct Q4_K_M | 0.49 GB | 2 GB | 3 GB or more | Faster, simpler wording |
+| all-MiniLM-L6-v2 Q8_0 (embeddings) | 25 MB | 1 GB | 2 GB or more | Semantic search. Loaded when Ask opens |
+| Whisper base.en (speech) | 148 MB | 2 GB | 4 GB or more | Voice. Loaded on first mic use |
+| Whisper tiny.en (speech) | 78 MB | 1 GB | 2 GB or more | Faster, less accurate voice |
+| ML Kit Text Recognition (Latin) | Bundled in APK | — | — | Scanning. No download needed |
 
 - **ABI:** llama.rn supports `arm64-v8a` and `x86_64` only. 32-bit-only phones are blocked in the UI.
 - **CPU only:** `n_gpu_layers: 0`, and OpenCL/Hexagon are disabled in the plugin, for broad compatibility. Expect roughly 5–20 tokens/s for 1.5B on recent mid-range and flagship phones. These are estimates; measure on your phone with the built-in test.
