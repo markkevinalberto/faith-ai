@@ -161,6 +161,18 @@ export async function addLabResult(db: SqlDatabase, profileId: string, labTestId
   return id;
 }
 
+/** Adds a line to a lab result's notes (e.g. an answer to FAITH's follow-up question), keeping what was there. */
+export async function appendLabResultNote(db: SqlDatabase, profileId: string, id: string, line: string, now = new Date().toISOString()): Promise<void> {
+  await db.transaction(async (tx) => {
+    const res = await tx.runAsync(
+      `UPDATE lab_results SET notes = CASE WHEN notes IS NULL OR trim(notes) = '' THEN ? ELSE notes || char(10) || ? END, updated_at = ? WHERE id = ? AND profile_id = ?`,
+      [line, line, now, id, profileId],
+    );
+    if (res.changes === 0) throw new NotFoundError('Lab result');
+    await logAudit(tx, { profileId, action: 'update', entityType: 'lab_result', entityId: id, detail: 'check-in answer', at: now });
+  });
+}
+
 export async function deleteLabResult(db: SqlDatabase, profileId: string, id: string): Promise<void> {
   const res = await db.runAsync('DELETE FROM lab_results WHERE id = ? AND profile_id = ?', [id, profileId]);
   if (res.changes === 0) throw new NotFoundError('Lab result');

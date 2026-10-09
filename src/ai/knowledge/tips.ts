@@ -35,7 +35,7 @@ export const TIPS = {
   glucoseActivity: tip('glucose.activity', 'Moving more, such as brisk walking on most days of the week, helps your body use glucose better.', 'ada-soc', 'who-diabetes'),
   glucoseHighRepeated: tip(
     'glucose.high.repeated',
-    'Several of your recent readings at this time of day are above your target. Share them with your care team, as they may want to review your plan.',
+    'Several of your recent readings at this time of day are above your target. Share them with your care team, who may review your treatment. Please don’t change it on your own.',
     'ada-soc',
   ),
   glucoseLowPlan: tip('glucose.low.plan', 'Follow the low-glucose plan your care team gave you, then check again as it advises.', 'ada-soc-hypoglycemia'),
@@ -67,11 +67,20 @@ export const TIPS = {
   bpActivity: tip('bp.activity', 'Regular activity, such as 30 minutes of brisk walking on most days, can help lower blood pressure.', 'ish-2020'),
   bpHighRepeated: tip(
     'bp.high.repeated',
-    'Several of your recent readings are above your target. Share them with your care team; FAITH can prepare questions for your next visit.',
+    'Several of your recent readings are above your target. Share them with your care team, who may review your treatment. Please don’t change it on your own.',
     'ish-2020',
   ),
   bpLow: tip('bp.low', 'If you feel dizzy or lightheaded, sit or lie down, and stand up slowly. Tell your care team if low readings come with dizziness or fainting.', 'aha-low-bp'),
   bpWithin: tip('bp.within', 'Well done. Measuring at the same times each day, for example morning and evening, makes your pattern easier to follow.', 'ish-2020', 'esc-2024-bp'),
+
+  // General medical care (not lifestyle): medicines as prescribed and routine checks
+  medsAsPrescribed: tip(
+    'meds.as_prescribed',
+    'Take your medicines as prescribed. If you often miss doses or have side effects, tell your care team rather than stopping on your own.',
+    'who-adherence',
+  ),
+  diabetesChecks: tip('diabetes.checks', 'People with diabetes are advised to have eye, kidney and foot checks every year. Ask your care team when yours are due.', 'ada-soc'),
+  diabetesFeet: tip('diabetes.feet', 'Look at your feet every day for cuts, blisters or sores, and tell your care team about any that do not heal.', 'ada-soc'),
 
   // Pulse and oxygen
   pulseMeasure: tip('pulse.measure', 'Rest for a few minutes before checking your pulse, and note if you have just had coffee or been active.', 'aha-heart-rate'),
@@ -114,6 +123,74 @@ export const TIPS = {
   labWithin: tip('lab.within', 'Your care team will tell you how often to repeat this test. Keeping your results in FAITH makes changes easy to see.', 'medlineplus-labs'),
 } satisfies Record<string, Tip>;
 
+/**
+ * "What to eat" advice, using foods common in the Philippines. General healthy-eating guidance from the
+ * cited guidelines (ADA plate method, DASH-style eating in ISH/WHO, NCEP therapeutic lifestyle diet),
+ * never a prescribed diet. Kidney patients are pointed to their care team where advice differs.
+ */
+export const FOOD = {
+  glucose: tip(
+    'food.glucose',
+    'Fill half your plate with vegetables like pechay, kangkong, sitaw, malunggay or ampalaya; a quarter with fish, chicken without skin, tofu or monggo; and a quarter with rice, preferably a smaller cup or brown rice. Choose water instead of soft drinks and sweet juices.',
+    'ada-soc',
+  ),
+  lowGlucose: tip(
+    'food.low_glucose',
+    'Keep a quick sugar with you, such as glucose tablets, hard candy or a small juice, and eat regular meals with some rice, bread or fruit plus protein.',
+    'ada-soc-hypoglycemia',
+  ),
+  bloodPressure: tip(
+    'food.blood_pressure',
+    'Eat more vegetables, fruit, fish, beans and low-fat milk. Cook with less salt, soy sauce, patis and bagoong, and add flavour with calamansi, garlic, onion and ginger instead. If you have kidney disease, ask your care team before eating more high-potassium fruit like bananas.',
+    'ish-2020',
+    'who-hearts',
+  ),
+  lipids: tip(
+    'food.lipids',
+    'Choose fish, monggo and other beans, oats, vegetables and fruit. Grill, steam or boil instead of frying, and cut back on pork fat, chicharon, lechon skin and dishes cooked with a lot of gata.',
+    'nhlbi-atp3',
+  ),
+  triglycerides: tip(
+    'food.triglycerides',
+    'Cut back on soft drinks, sweet juices, kakanin and other sweets, large servings of rice, and alcohol. Fish such as bangus, tamban or sardines are good choices.',
+    'nhlbi-atp3',
+  ),
+  kidney: tip(
+    'food.kidney',
+    'Use less salt and avoid processed and canned foods. Ask your care team how much protein and which fruits suit your kidneys before changing your diet.',
+    'kdigo-2024',
+  ),
+} satisfies Record<string, Tip>;
+
+/** The food tip that fits a reading, or null when food advice isn't relevant (pulse, oxygen, low BP). */
+export function foodForReading(type: ReadingTipInput['type'], position: RangePosition | null): Tip | null {
+  if (type === 'glucose') return position === 'below' ? FOOD.lowGlucose : FOOD.glucose;
+  if (type === 'blood_pressure') return position === 'below' ? null : FOOD.bloodPressure;
+  return null;
+}
+
+/** The food tip for a lab result outside its goal band, or null. */
+export function foodForLab(biomarker: Biomarker, placement: Placement | null): Tip | null {
+  if (!placement || labDirection(biomarker, placement) === 'within') return null;
+  switch (biomarker.id) {
+    case 'hba1c':
+      return FOOD.glucose;
+    case 'ldl':
+    case 'hdl':
+    case 'total-cholesterol':
+      return FOOD.lipids;
+    case 'triglycerides':
+      return FOOD.triglycerides;
+    case 'egfr':
+    case 'uacr':
+    case 'creatinine':
+    case 'bun':
+      return FOOD.kidney;
+    default:
+      return null;
+  }
+}
+
 export interface ReadingTipInput {
   type: 'glucose' | 'blood_pressure' | 'pulse' | 'spo2';
   /** Position against the clinician target or general reference; null when there is nothing to compare with. */
@@ -121,6 +198,8 @@ export interface ReadingTipInput {
   glucoseContext?: GlucoseContext | null;
   /** True when several recent readings (same type and context) were also above the target. */
   repeatedlyAbove?: boolean;
+  /** The person has active medicines recorded, so the "as prescribed" tip applies. */
+  hasMedications?: boolean;
 }
 
 /** Up to three tips for a saved reading, most relevant first. */
@@ -129,7 +208,7 @@ export function tipsForReading(i: ReadingTipInput): Tip[] {
   if (i.type === 'glucose') {
     if (i.position === null) out.push(TIPS.glucoseNoContext);
     else if (i.position === 'below') out.push(TIPS.glucoseLowPlan, TIPS.glucoseLowNote);
-    else if (i.position === 'within') out.push(TIPS.glucoseWithin);
+    else if (i.position === 'within') out.push(TIPS.glucoseWithin, TIPS.diabetesFeet, TIPS.diabetesChecks);
     else {
       out.push(i.glucoseContext === 'fasting' ? TIPS.glucoseHighFasting : i.glucoseContext === 'after_meal' ? TIPS.glucoseHighAfterMeal : TIPS.glucoseHighOther);
       out.push(TIPS.glucoseActivity);
@@ -137,10 +216,11 @@ export function tipsForReading(i: ReadingTipInput): Tip[] {
     }
   } else if (i.type === 'blood_pressure') {
     if (i.position === 'above') {
-      out.push(TIPS.bpRecheck, TIPS.bpSalt);
-      out.push(i.repeatedlyAbove ? TIPS.bpHighRepeated : TIPS.bpActivity);
+      // Salt is covered by the food advice (FOOD.bloodPressure) shown alongside.
+      out.push(TIPS.bpRecheck, TIPS.bpActivity);
+      if (i.repeatedlyAbove) out.push(TIPS.bpHighRepeated);
     } else if (i.position === 'below') out.push(TIPS.bpLow, TIPS.bpMeasure);
-    else if (i.position === 'within') out.push(TIPS.bpWithin);
+    else if (i.position === 'within') out.push(TIPS.bpWithin, ...(i.hasMedications ? [TIPS.medsAsPrescribed] : []));
     else out.push(TIPS.bpMeasure);
   } else if (i.type === 'pulse') out.push(TIPS.pulseMeasure);
   else out.push(TIPS.spo2Measure);
@@ -155,17 +235,16 @@ export function tipsForLab(biomarker: Biomarker, placement: Placement | null): T
   const out: Tip[] = [];
   switch (biomarker.id) {
     case 'hba1c':
-      out.push(TIPS.hba1cAbove, TIPS.hba1cLog);
+      out.push(TIPS.hba1cAbove, TIPS.hba1cLog, TIPS.diabetesChecks);
       break;
+    // Food choices for these come from foodForLab, shown alongside.
     case 'ldl':
     case 'total-cholesterol':
-      out.push(TIPS.lipidsFood, TIPS.lipidsActivity);
-      break;
     case 'triglycerides':
-      out.push(TIPS.triglyceridesSugar, TIPS.lipidsActivity);
+      out.push(TIPS.lipidsActivity);
       break;
     case 'hdl':
-      out.push(TIPS.hdlLow, TIPS.lipidsFood);
+      out.push(TIPS.hdlLow);
       break;
     case 'egfr':
     case 'uacr':

@@ -6,6 +6,7 @@
  * diagnosis, or drops the computed position phrase. Without a model the computed note is shown.
  */
 import { listLabResults } from '../db/repo/care';
+import { listMedications } from '../db/repo/medications';
 import { listTargets } from '../db/repo/profiles';
 import { listReadings } from '../db/repo/vitals';
 import type { SqlExecutor } from '../db/sql';
@@ -16,8 +17,9 @@ import { formatBloodPressure, formatGlucose, glucoseDecimals, mgdlToGlucoseUnit,
 import { guardOutput } from './guard';
 import type { ChatMessage, InferenceEngine } from './inference/types';
 import { describeBandRange, findBiomarker, placeValue, type Biomarker } from './knowledge/biomarkers';
+import { questionsForLab, questionsForReading, type CheckinQuestion } from './knowledge/checkins';
 import { getSource } from './knowledge/sources';
-import { tipsForLab, tipsForReading, type Tip } from './knowledge/tips';
+import { foodForLab, foodForReading, labDirection, tipsForLab, tipsForReading, type Tip } from './knowledge/tips';
 
 export interface CoachNote {
   /** One plain sentence: the value and where it sits. */
@@ -25,10 +27,16 @@ export interface CoachNote {
   /** Computed context: the previous result and the recent pattern. */
   details: string[];
   tips: Tip[];
+  /** What to eat, when food advice fits this result. */
+  food: Tip | null;
   /** A generated note must repeat this phrase verbatim (null when there is nothing to compare with). */
   requiredPhrase: string | null;
   /** Organisations whose guidelines the tips come from, e.g. "American Diabetes Association". */
   sources: string[];
+  /** Follow-up questions FAITH asks, with one-tap answers. */
+  questions: CheckinQuestion[];
+  /** Picks the mascot's pose: on target, needs attention, or nothing to compare with. */
+  mood: 'good' | 'attention' | 'neutral';
 }
 
 export interface CoachMessage {
@@ -48,8 +56,9 @@ const CONTEXT_WORD: Record<GlucoseContext, string> = {
   random: '',
 };
 
-function sourceTitles(tips: Tip[]): string[] {
-  const publishers = tips.flatMap((t) => t.sourceIds).map((id) => getSource(id)?.publisher.split(' (')[0]);
+function sourceTitles(tips: Tip[], questions: CheckinQuestion[] = []): string[] {
+  const ids = [...tips.flatMap((t) => t.sourceIds), ...questions.flatMap((q) => q.answers.flatMap((a) => a.sourceIds))];
+  const publishers = ids.map((id) => getSource(id)?.publisher.split(' (')[0]);
   return [...new Set(publishers.filter((p): p is string => !!p))];
 }
 
@@ -158,8 +167,13 @@ export async function buildReadingNote(p: ReadingNoteParams): Promise<CoachNote 
     repeatedlyAbove = above >= 3 && above * 2 >= week.length;
   }
 
-  const tips = tipsForReading({ type: r.type as CoachedType, position, glucoseContext: glucose ? ((r.context as GlucoseContext | null) ?? null) : null, repeatedlyAbove });
-  return { summary, details, tips, requiredPhrase, sources: sourceTitles(tips) };
+  const hasMedications = (await listMedications(p.db, p.profile.id)).some((m) => m.medication.status === 'active');
+  const glucoseContext = glucose ? ((r.context as GlucoseContext | null) ?? null) : null;
+  const tips = tipsForReading({ type: r.type as CoachedType, position, glucoseContext, repeatedlyAbove, hasMedications });
+  const questions = questionsForReading({ type: r.type as CoachedType, position, glucoseContext, hasMedications });
+  const food = foodForReading(r.type as CoachedType, position);
+  const mood = position === null ? 'neutral' : position === 'within' ? 'good' : 'attention';
+  return { summary, details, tips, food, requiredPhrase, sources: sourceTitles(food ? [...tips, food] : tips, questions), questions, mood };
 }
 
 export interface LabNoteParams {
@@ -191,24 +205,29 @@ export async function buildLabNote(p: LabNoteParams): Promise<CoachNote> {
     details.push(text);
   }
   const tips = tipsForLab(biomarker, placement);
-  return { summary, details, tips, requiredPhrase: placement ? placement.band.say : null, sources: sourceTitles(tips) };
+  const direction = placement ? labDirection(biomarker, placement) : null;
+  const questions = questionsForLab(biomarker, direction);
+  const food = foodForLab(biomarker, placement);
+  const mood = direction === null ? 'neutral' : direction === 'within' ? 'good' : 'attention';
+  return { summary, details, tips, food, requiredPhrase: placement ? placement.band.say : null, sources: sourceTitles(food ? [...tips, food] : tips, questions), questions, mood };
 }
 
 export const COACH_PROMPT = `You are FAITH, a kind, experienced nurse talking with an older adult who has just recorded a health result on their phone. You are not a doctor.
 Rules you must always follow:
-- Use ONLY the RESULT and TIPS below. Never add numbers, dates, foods, medicines or advice that are not written there.
+- Use ONLY the RESULT and TIP below. Never add numbers, dates, foods, medicines or advice that are not written there.
 - First sentence: the result and where it sits, worded exactly as in RESULT.
-- Then encourage one or two of the TIPS in your own simple, friendly words. Do not copy every tip.
+- Second sentence: encourage the TIP in your own simple, friendly words.
 - Never diagnose. Never say a result is safe, normal or fine. Never suggest starting, stopping or changing any medicine.
-- Write 2 or 3 short sentences in plain English. No lists, no headings, no questions.`;
+- Write 2 short sentences in plain English. No lists, no headings, no questions.`;
 
 /**
- * What the model sees: the headline result and the tips. The comparison lines are shown under the
- * note as computed text, so the model is not asked to restate them (small models copy everything).
+ * What the model sees: the headline result and the first tip only. The full tip list, food advice
+ * and comparison lines are shown as computed text beside the note, so the model is not asked to
+ * restate them (small models copy everything they are given).
  */
 export function coachContext(note: CoachNote): string {
-  const tips = note.tips.map((t) => `- ${t.text}`).join('\n');
-  return `RESULT:\n- ${note.summary}\n\nTIPS:\n${tips}`;
+  const tip = note.tips[0] ? `\n\nTIP:\n- ${note.tips[0].text}` : '';
+  return `RESULT:\n- ${note.summary}${tip}`;
 }
 
 export function coachMessages(note: CoachNote): ChatMessage[] {
@@ -218,8 +237,11 @@ export function coachMessages(note: CoachNote): ChatMessage[] {
   ];
 }
 
-/** Words a tips note must never contain: tips are not about medicines or doses. */
-const NOT_IN_TIPS = ['dose', 'doses', 'dosage', 'insulin', 'prescription'];
+/**
+ * Words a tips note must never contain: tips are not about medicines or doses, and FAITH never calls
+ * a result normal or safe, or promises a cure (small models write "return to normal").
+ */
+const NOT_IN_TIPS = ['dose', 'doses', 'dosage', 'insulin', 'prescription', 'normal', 'safe', 'cure', 'cures'];
 
 /**
  * Has the on-device model write the note. `message` is null when the draft does not pass the guard

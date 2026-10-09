@@ -75,6 +75,18 @@ export async function updateReading(db: SqlDatabase, profileId: string, id: stri
   });
 }
 
+/** Adds a line to a reading's notes (e.g. an answer to FAITH's follow-up question), keeping what was there. */
+export async function appendReadingNote(db: SqlDatabase, profileId: string, id: string, line: string, now = new Date().toISOString()): Promise<void> {
+  await db.transaction(async (tx) => {
+    const res = await tx.runAsync(
+      `UPDATE vital_readings SET notes = CASE WHEN notes IS NULL OR trim(notes) = '' THEN ? ELSE notes || char(10) || ? END, updated_at = ? WHERE id = ? AND profile_id = ?`,
+      [line, line, now, id, profileId],
+    );
+    if (res.changes === 0) throw new NotFoundError('Reading');
+    await logAudit(tx, { profileId, action: 'update', entityType: 'vital_reading', entityId: id, detail: 'check-in answer', at: now });
+  });
+}
+
 export async function deleteReading(db: SqlDatabase, profileId: string, id: string): Promise<void> {
   await db.transaction(async (tx) => {
     const res = await tx.runAsync('DELETE FROM vital_readings WHERE id = ? AND profile_id = ?', [id, profileId]);

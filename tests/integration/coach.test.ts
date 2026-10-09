@@ -50,7 +50,7 @@ describe("FAITH's note after a reading", () => {
     expect(note?.details[1]).toBe('4 of your last 4 fasting glucose readings in the past 7 days were above the general reference range.');
     expect(note?.tips.map((t) => t.id)).toEqual(['glucose.high.fasting', 'glucose.activity', 'glucose.high.repeated']);
     expect(note?.requiredPhrase).toBe('above the general reference range');
-    expect(note?.sources).toEqual(['American Diabetes Association', 'World Health Organization']);
+    expect(note?.sources).toEqual(['American Diabetes Association', 'World Health Organization', 'ADA / EASD / JBDS / AACE / DTS']);
   });
 
   it("uses the clinician's own blood pressure target when one is recorded", async () => {
@@ -88,7 +88,10 @@ describe("FAITH's note after a lab result", () => {
     const note = await buildLabNote({ db, profile, biomarker: getBiomarker('hba1c')!, value: 7, unit: '%', resultId });
     expect(note.summary).toBe('Your HbA1c of 7 % is in the diabetes range (6.5 % and above). This is a general reference, not personalised.');
     expect(note.details).toEqual([expect.stringMatching(/^Your previous HbA1c was 7\.4 % on .+\. This result is 0\.4 % lower\.$/)]);
-    expect(note.tips.map((t) => t.id)).toEqual(['hba1c.above', 'hba1c.log', 'lab.discuss']);
+    expect(note.tips.map((t) => t.id)).toEqual(['hba1c.above', 'hba1c.log', 'diabetes.checks']);
+    expect(note.food?.id).toBe('food.glucose');
+    expect(note.questions.map((q) => q.id)).toEqual(['hba1c.home_checks']);
+    expect(note.mood).toBe('attention');
     expect(note.requiredPhrase).toBe('in the diabetes range');
   });
 });
