@@ -106,7 +106,9 @@ docs/           Implementation plan, Android build and device testing, privacy a
 ```
 
 ## Documentation
-- [Implementation plan and architecture](docs/IMPLEMENTATION_PLAN.md)
+- [Hackathon submission: pitch, how FAITH meets the rules, judges' Q&A](docs/SUBMISSION.md)
+- [Structure and architecture: frameworks, layers, pipelines, data model](docs/ARCHITECTURE.md)
+- [Implementation plan](docs/IMPLEMENTATION_PLAN.md)
 - [Android build, device checklist, model compatibility, notification limits](docs/ANDROID_BUILD_AND_DEVICE_TESTING.md)
 - [Privacy, data handling and medical safety](docs/PRIVACY_AND_SAFETY.md)
 - [Disclosures: models, libraries, tools](DISCLOSURES.md)
@@ -114,7 +116,7 @@ docs/           Implementation plan, Android build and device testing, privacy a
 - Landing page: [`landing/`](landing/) is a static site (`index.html` plus `img/`), deployable to any static host. `faith-landing.html` is the source fragment; `node landing/make-index.js` regenerates `index.html` from it.
 
 ## Known limitations
-- **Some artwork is still a placeholder.** The five mascot poses are sharp transparent cut-outs from the character sheet. The other illustrations (3D icons, empty states, contextual mascot scenes) are 2× upscales cropped from the design board, so they look soft on high-density screens. Replace any of them with a full-resolution export of the same file name, and update its pixel size in `src/ui/Illustration.tsx`.
+- **Some icons are upscaled.** The mascot poses are sharp transparent cut-outs from the character sheet; the small 3D icons (shield, bell, globe, cloud) are 2× upscales cut out of the design board and look soft on high-density screens. Replace any of them with a full-resolution export of the same file name, and update its pixel size in `src/ui/Illustration.tsx`.
 - The clinical content (escalation thresholds, reference ranges, library) is **draft** and needs review by a licensed clinician before real-world use.
 - iOS hasn't been built yet. It needs EAS and an Apple developer account; the code avoids Android-only APIs except the date picker, which has an iOS path.
 - Model download speed and inference speed depend on the device. Speeds in the docs are estimates until measured with the in-app test.
