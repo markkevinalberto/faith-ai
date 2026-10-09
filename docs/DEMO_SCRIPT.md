@@ -35,6 +35,7 @@
    - Medicines tab → scan icon → photograph the label. ML Kit reads it on the phone. Missing fields are filled by the on-device LLM only if they are printed on the label. Review → **Use these details** → the form is pre-filled with suggested times.
    - Care plan → Lab tests → **Scan report**. Untick any row, then save. The results now appear under Lab tests and in Ask.
    - Vitals → + → tap the mic and say "blood pressure 130 over 85, pulse 72". The form fills in for you to confirm.
+6b. **Hybrid, if asked** (30 s, optional): Settings → Online assistant is off by default. With your own free Groq key and Wi-Fi back on, the status line reads "Online assistant · Groq", answers are labelled "online (Groq)" and the same guard checks them; switch airplane mode on again and the next answer comes from the phone. Keep it off for the offline part of the demo.
 7. **Trust** (30 s):
    - Settings → Security shows the SQLCipher-encrypted database.
    - Settings → On-device AI → Run a quick test shows inference offline.
