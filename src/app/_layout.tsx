@@ -50,6 +50,7 @@ export default function RootLayout() {
             <Stack.Screen name="settings/profile" options={{ title: 'Profile & conditions' }} />
             <Stack.Screen name="settings/targets" options={{ title: 'Target ranges' }} />
             <Stack.Screen name="settings/model" options={{ title: 'On-device AI' }} />
+            <Stack.Screen name="settings/online" options={{ title: 'Online assistant' }} />
             <Stack.Screen name="settings/data" options={{ title: 'Your data' }} />
             <Stack.Screen name="settings/about" options={{ title: 'About & disclosures' }} />
           </Stack>

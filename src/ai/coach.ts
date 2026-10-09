@@ -43,6 +43,8 @@ export interface CoachMessage {
   text: string;
   engineLabel: string;
   tokensPerSecond: number | null;
+  /** True when the optional online assistant wrote it. */
+  online: boolean;
 }
 
 const DAY = 86_400_000;
@@ -259,5 +261,5 @@ export async function writeCoachMessage(
     forbiddenTerms: [...NOT_IN_TIPS, ...(opts.medicationNames ?? [])],
   });
   if (!guard.ok) return { message: null, violations: guard.violations };
-  return { message: { text: guard.text, engineLabel: engine.label, tokensPerSecond: result.tokensPerSecond }, violations: [] };
+  return { message: { text: guard.text, engineLabel: engine.label, tokensPerSecond: result.tokensPerSecond, online: !engine.runsOnDevice }, violations: [] };
 }

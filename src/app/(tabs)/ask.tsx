@@ -7,6 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { SUGGESTED_QUESTIONS, answerQuestion, type AssistantAnswer } from '@/ai/answer';
 import { engineStore } from '@/ai/inference/engineStore';
 import { localModels } from '@/ai/inference/localModels';
+import { getOnlineEngine } from '@/ai/inference/onlineAssistant';
+import type { PriorTurn } from '@/ai/prompt';
 import { AnswerCard } from '@/components/AnswerCard';
 import { DemoBanner } from '@/components/AppChrome';
 import { OfflineBadge } from '@/components/OfflineBadge';
@@ -26,6 +28,13 @@ interface Turn {
   answer: AssistantAnswer | null;
   tokens: number;
   error: string | null;
+  /** True while the optional online assistant is answering. */
+  online?: boolean;
+}
+
+/** What a turn said, for the chat history: the generated note or the headline and facts. */
+function answerText(a: AssistantAnswer): string {
+  return (a.generated?.text ?? [a.headline, ...a.facts.map((f) => f.text)].join(' ')).slice(0, 600);
 }
 
 export default function Ask() {
@@ -62,7 +71,10 @@ export default function Ask() {
     setBusy(true);
     try {
       const state = engineStore.get();
-      const embedder = await localModels.getEmbedder();
+      const [embedder, online] = await Promise.all([localModels.getEmbedder(), getOnlineEngine(db).catch(() => null)]);
+      if (online) setTurns((t) => t.map((x) => (x.id === id ? { ...x, online: true } : x)));
+      // The last few exchanges, so follow-up questions ("and last month?") make sense.
+      const history: PriorTurn[] = turns.filter((x) => x.answer).slice(-4).map((x) => ({ question: x.question, answer: answerText(x.answer as AssistantAnswer) }));
       let tokens = 0;
       const answer = await answerQuestion({
         db,
@@ -71,6 +83,8 @@ export default function Ask() {
         now: new Date(),
         timeZone,
         engine: state.status === 'ready' ? state.engine : null,
+        online,
+        history,
         embedder,
         // Raw tokens are NOT displayed before the safety guard runs; only progress is shown.
         onToken: () => {
@@ -143,7 +157,7 @@ export default function Ask() {
                 {t.answer ? <AnswerCard answer={t.answer} emergencyNumber={profile.emergencyNumber} /> : null}
                 {!t.answer && !t.error ? (
                   <View>
-                    <InlineLoading label={t.tokens > 0 ? `Writing on this device… (${t.tokens} tokens)` : 'Looking through your records…'} />
+                    <InlineLoading label={t.online ? 'Asking the online assistant…' : t.tokens > 0 ? `Writing on this device… (${t.tokens} tokens)` : 'Looking through your records…'} />
                     {t.tokens > 0 ? (
                       <Pressable accessibilityRole="button" onPress={() => void engineStore.get().engine?.stop()} style={{ alignSelf: 'center', minHeight: 44, justifyContent: 'center' }}>
                         <AppText variant="label" tone="primary">

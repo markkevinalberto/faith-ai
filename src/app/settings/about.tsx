@@ -19,6 +19,7 @@ const STACK = [
   'llama.rn 0.12.9 — React Native bindings for llama.cpp (on-device answers and embeddings)',
   'whisper.rn 0.7.4 — React Native bindings for whisper.cpp (on-device speech-to-text)',
   'wllama 3.8.1 — llama.cpp compiled to WebAssembly (browser build: answers and semantic search)',
+  'Optional online assistant (off by default): any OpenAI-compatible chat API with your own key; Groq’s free plan is the preset',
   'Google ML Kit Text Recognition v2, bundled model (on-device label and report reading) via @react-native-ml-kit/text-recognition',
   '@fugood/react-native-audio-pcm-stream (microphone, in memory), expo-image-picker (camera), expo-network (offline badge)',
   'react-native-svg (charts), expo-file-system, expo-document-picker, expo-sharing',
@@ -48,7 +49,9 @@ export default function About() {
 
       <Section title="Privacy">
         <Card style={{ gap: SPACE.xs }}>
-          <AppText variant="body">All data stays on this phone in an encrypted database. There is no account, server, analytics or crash reporting. The only network request FAITH can make is the optional AI model download that you start yourself — it sends no health data.</AppText>
+          <AppText variant="body">
+            All data stays on this phone in an encrypted database. There is no account, server, analytics or crash reporting. The only network requests FAITH can make are the optional AI model download that you start yourself (it sends no health data) and, only if you switch on the optional online assistant in Settings, the questions you ask together with the facts FAITH shows under each answer.
+          </AppText>
         </Card>
       </Section>
 
@@ -57,7 +60,9 @@ export default function About() {
           <AppText variant="body">1. A safety router checks for emergencies and requests to change medicines first.</AppText>
           <AppText variant="body">2. FAITH retrieves facts from your records and calculates averages, ranges and trends with tested code.</AppText>
           <AppText variant="body">3. A curated offline library adds plain-language explanations with sources.</AppText>
-          <AppText variant="body">4. If a model is installed, it rewrites those facts on-device. Its output is checked; anything unsafe or unsupported is discarded.</AppText>
+          <AppText variant="body">
+            4. If a model is installed, it rewrites those facts on-device (or, when the optional online assistant is on and you have internet, a bigger online model does). Its output is checked; anything unsafe or unsupported is discarded, and online answers are marked.
+          </AppText>
         </Card>
       </Section>
 

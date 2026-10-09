@@ -46,6 +46,10 @@ npm run export:web   # static site in dist/; deploy that folder (vercel deploy d
 
 `export:web` runs `expo export` and then `scripts/postexport-web.js`, which renames `assets/node_modules` to `assets/vendor`: Vercel never uploads a directory called `node_modules`, and that is where Expo puts the wllama and SQLite wasm files. Multi-threaded WebAssembly needs `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: credentialless` on every response (see `vercel.json`); without them wllama falls back to a single thread.
 
+### Optional online assistant (hybrid)
+
+Off by default. In Settings → Online assistant, a person can add their own API key for Groq's free plan (or any OpenAI-compatible service). When it is on and the internet is reachable, Ask FAITH and FAITH's notes send the same prompt the on-device model would get (question, computed facts, library excerpts, recent turns) to the bigger online model, run its answer through the same guard, and label it "online". Offline, or if the service fails, everything falls back to the on-device model. See DISCLOSURES.md for what is sent and Groq's data handling.
+
 **Why local beats cloud here:**
 - Health records, voice and photos of prescriptions never leave the phone.
 - It works in clinics, on the road and during outages.

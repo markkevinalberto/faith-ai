@@ -183,6 +183,13 @@ export const SETTINGS = {
   textSize: 'text_size',
   /** First-run AI model set-up: 'done' | 'declined' (unset until one of those happens). */
   aiSetup: 'ai_setup',
+  /** Optional online assistant: '1' when switched on (off by default). */
+  onlineEnabled: 'online_enabled',
+  /** 'groq' | 'custom'. */
+  onlineProvider: 'online_provider',
+  onlineModel: 'online_model',
+  /** Base URL for a custom OpenAI-compatible endpoint. */
+  onlineBaseUrl: 'online_base_url',
 } as const;
 
 export async function getSetting(db: SqlExecutor, key: string): Promise<string | null> {

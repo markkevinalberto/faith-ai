@@ -17,7 +17,7 @@ Everything FAITH uses to work, and how it was built. Last updated 2026-10-09.
 
 - Models come from the official `Qwen/Qwen2.5-*-Instruct-GGUF` and `ggerganov/whisper.cpp` repositories and the `second-state/All-MiniLM-L6-v2-Embedding-GGUF` repository on Hugging Face. Each download is verified on the phone by size, file header (GGUF or ggml) and MD5. The MD5 values were matched to the published SHA-256 on 2026-10-09.
 - The semantic-search thresholds were calibrated on 2026-10-09 by running all-MiniLM-L6-v2 (via transformers.js, on the development PC) over FAITH's library and sample records. The app itself uses only the on-device GGUF model.
-- **No cloud AI API is used, at runtime or as a fallback.** Without a model, FAITH answers from deterministic record summaries and the offline library.
+- **No cloud AI API is used unless you switch on the optional online assistant** (its own section below). Without a model, FAITH answers from deterministic record summaries and the offline library.
 - Core "local AI" features run fully offline:
   - the safety and intent router
   - retrieval and calculations
@@ -28,6 +28,16 @@ Everything FAITH uses to work, and how it was built. Last updated 2026-10-09.
   - voice transcription (Whisper)
   - label and lab-report scanning (ML Kit OCR, parsers, and grounded extraction by the on-device LLM)
 - **Network use:** the only requests FAITH can make are the model downloads that you start yourself from Settings → On-device AI (to huggingface.co). They send no health data. You can also import model files from phone storage with no network at all. The browser build downloads the same files into the browser's private storage; voice and scanning are not part of the browser build.
+
+## Optional online assistant (off by default)
+
+Added 2026-10-10. In Settings → Online assistant, a person can switch on a cloud model for Ask FAITH and FAITH's notes, using their own API key. The preset is **Groq's free plan** (`openai/gpt-oss-120b` by default; also `openai/gpt-oss-20b` and `qwen/qwen3.8-27b`), reached through its OpenAI-compatible endpoint `https://api.groq.com/openai/v1`; any other OpenAI-compatible service can be entered as "custom".
+
+- **What is sent:** the same prompt the on-device model gets: the system prompt, the question, the facts FAITH computed from the person's records (the ones shown under the answer), the library excerpts, and up to four earlier exchanges of the same chat. Nothing else leaves the device; nothing is sent when the switch is off, when there is no key, or when there is no internet.
+- **Same rules:** the online model's answer passes through the same output guard (no dosing, no diagnosis, no "normal/safe", no unsupported numbers, required band phrases). If it fails or the service is unreachable, FAITH falls back to the on-device model, then to the record summary. Every online answer is labelled "online (Groq)".
+- **Groq's data handling (per its "Your Data" page, read 2026-10-10):** inference requests are not retained by default; logs of up to 30 days may be kept only for reliability or abuse investigations, which the account owner can opt out of with Zero Data Retention; data is processed in the United States. Its free plan allows 30 requests a minute and 1,000 a day. Google's Gemini API was considered and not used: its unpaid tier may be read by human reviewers and used for training, and its terms exclude providing medical advice.
+- The API key is stored in expo-secure-store on the phone (localStorage in the browser build) and is never written to FAITH's database or logs.
+- The hackathon's "hybrid local + cloud" category applies: the core local AI (router, retrieval, library, on-device generation, guard, embeddings, voice, scanning) works with the switch off and offline.
 
 ## Frameworks and libraries
 

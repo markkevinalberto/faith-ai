@@ -10,7 +10,7 @@ import { guardOutput } from './guard';
 import type { InferenceEngine } from './inference/types';
 import { getArticle, type KnowledgeArticle } from './knowledge/library';
 import { searchLibrary } from './knowledge/search';
-import { buildContextText, buildMessages } from './prompt';
+import { buildContextText, buildMessages, historyContext, type PriorTurn } from './prompt';
 import type { ReportedValue } from './reported';
 import { retrieve, type Fact } from './retrieval';
 import { routeQuestion, type Intent } from './router';
@@ -54,7 +54,8 @@ export interface AssistantAnswer {
   headline: string;
   facts: Fact[];
   references: KnowledgeArticle[];
-  generated: { text: string; engineLabel: string; durationMs: number; tokensPerSecond: number | null } | null;
+  /** `online` is true when the optional online assistant wrote it (the prompt left the device). */
+  generated: { text: string; engineLabel: string; durationMs: number; tokensPerSecond: number | null; online: boolean } | null;
   generationNote: string | null;
   limitations: string[];
   /** How records and articles were found: keywords only, or keywords plus on-device embeddings. */
@@ -70,6 +71,10 @@ export interface AnswerParams {
   now: Date;
   timeZone: string;
   engine?: InferenceEngine | null;
+  /** The optional online assistant; tried first when present, with `engine` as the fallback. */
+  online?: InferenceEngine | null;
+  /** Earlier exchanges in this chat, oldest first. */
+  history?: PriorTurn[];
   /** Optional on-device embedding model for semantic search. */
   embedder?: Embedder | null;
   onToken?: (token: string) => void;
@@ -174,7 +179,8 @@ export async function answerQuestion(p: AnswerParams): Promise<AssistantAnswer> 
     const article = id ? getArticle(id) : null;
     references = article ? [article] : [];
   } else {
-    const k = route.intent === 'explain_term' ? 2 : 1;
+    // A large online model can use more library material than a 0.5B on-device one.
+    const k = p.online?.isReady() ? 3 : route.intent === 'explain_term' ? 2 : 1;
     references = searchLibrary(question, k).map((r) => r.article);
     if (embedder) {
       try {
@@ -201,28 +207,38 @@ export async function answerQuestion(p: AnswerParams): Promise<AssistantAnswer> 
   if (!MODEL_INTENTS.includes(route.intent)) return answer;
   if (retrieval.facts.length === 0 && references.length === 0) return answer;
 
-  const engine = p.engine ?? null;
-  if (!engine || !engine.isReady()) {
+  // The online assistant first (when on and reachable), then the on-device model as the fallback.
+  const engines = [p.online ?? null, p.engine ?? null].filter((e): e is InferenceEngine => !!e && e.isReady());
+  if (engines.length === 0) {
     answer.generationNote = 'On-device model not loaded — showing the record summary and library text only.';
     return answer;
   }
 
-  try {
-    const result = await engine.generate(buildMessages(question, retrieval.facts, references), {
-      maxTokens: 220,
-      temperature: 0.2,
-      timeoutMs: 90_000,
-      onToken: p.onToken,
-    });
-    const guard = guardOutput(result.text, buildContextText(question, retrieval.facts, references), { requiredPhrases: retrieval.mustInclude });
-    if (guard.ok) {
-      answer.generated = { text: guard.text, engineLabel: engine.label, durationMs: result.durationMs, tokensPerSecond: result.tokensPerSecond };
-    } else {
-      answer.generationNote = `The on-device model's draft did not pass FAITH's safety checks (${guard.violations.join(', ')}), so only verified record facts are shown.`;
+  const notes: string[] = [];
+  for (const engine of engines) {
+    const who = engine.runsOnDevice ? 'The on-device model' : 'The online assistant';
+    // A small on-device model gets one earlier turn (its context is 2,048 tokens); the online model gets four.
+    const history = (p.history ?? []).slice(engine.runsOnDevice ? -1 : -4);
+    try {
+      const result = await engine.generate(buildMessages(question, retrieval.facts, references, history), {
+        maxTokens: engine.runsOnDevice ? 220 : 320,
+        temperature: 0.2,
+        timeoutMs: engine.runsOnDevice ? 90_000 : 30_000,
+        onToken: p.onToken,
+      });
+      const context = `${buildContextText(question, retrieval.facts, references)}\n${historyContext(history)}`;
+      const guard = guardOutput(result.text, context, { requiredPhrases: retrieval.mustInclude });
+      if (guard.ok) {
+        answer.generated = { text: guard.text, engineLabel: engine.label, durationMs: result.durationMs, tokensPerSecond: result.tokensPerSecond, online: !engine.runsOnDevice };
+        answer.generationNote = notes.length ? notes.join(' ') : null;
+        return answer;
+      }
+      notes.push(`${who}'s draft did not pass FAITH's safety checks (${guard.violations.join(', ')}).`);
+    } catch (e) {
+      notes.push(`${who} could not finish (${e instanceof Error ? e.message : 'unknown error'}).`);
     }
-  } catch (e) {
-    answer.generationNote = `The on-device model could not finish (${e instanceof Error ? e.message : 'unknown error'}). Showing the record summary instead.`;
   }
+  answer.generationNote = `${notes.join(' ')} Showing the record summary instead.`;
   return answer;
 }
 

@@ -1,10 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Linking, Platform, Pressable, View } from 'react-native';
 
 import { useEngineState } from '@/ai/inference/engineStore';
 import { getModelSpec } from '@/ai/inference/modelCatalog';
+import { PROVIDERS, loadOnlineSettings, useOnlineSettings } from '@/ai/inference/onlineAssistant';
 import { initials } from '@/components/AppChrome';
 import { TextSizePicker } from '@/components/TextSizePicker';
 import { deleteProfileData } from '@/db/dataManagement';
@@ -84,6 +85,10 @@ export default function Settings() {
   };
 
   const activeModel = engine.modelId ? getModelSpec(engine.modelId) : null;
+  const online = useOnlineSettings();
+  useEffect(() => {
+    void loadOnlineSettings(db).catch(() => undefined);
+  }, [db]);
 
   return (
     <Screen edges={[]}>
@@ -180,13 +185,25 @@ export default function Settings() {
         </Card>
       </Section>
 
-      <Section title="On-device AI">
+      <Section title="AI">
         <Card padded={false} style={{ paddingHorizontal: SPACE.lg }}>
           <ListRow
             icon="hardware-chip-outline"
-            title="Language model"
+            title="On-device models"
             subtitle={engine.status === 'ready' ? `${activeModel?.name ?? 'Model'} loaded — runs on this phone` : 'Not loaded. FAITH still answers from your records without it.'}
             onPress={() => router.push('/settings/model')}
+          />
+          <Divider />
+          <ListRow
+            icon="cloud-outline"
+            iconTone="info"
+            title="Online assistant (optional)"
+            subtitle={
+              online?.enabled && online.hasKey
+                ? `On · ${PROVIDERS[online.provider].label} ${online.model}. Used when you have internet; your question and the facts shown are sent there.`
+                : 'Off. Clearer answers from a bigger online model when you have internet, with your own free key.'
+            }
+            onPress={() => router.push('/settings/online')}
           />
         </Card>
       </Section>

@@ -19,9 +19,15 @@ import { Banner, Pill } from '@/ui/Feedback';
 import { AppText } from '@/ui/Text';
 import { RADIUS, SPACE, useTheme } from '@/ui/theme';
 
+/** "Groq" from an online engine label such as "openai/gpt-oss-120b · Groq (online)". */
+function providerOf(engineLabel: string): string {
+  return engineLabel.split(' · ')[1]?.replace(' (online)', '') ?? 'the online assistant';
+}
+
 export function AnswerCard({ answer, emergencyNumber }: { answer: AssistantAnswer; emergencyNumber: string | null }) {
   const { c } = useTheme();
   const [openRef, setOpenRef] = useState<string | null>(null);
+  const online = answer.generated?.online ?? false;
   return (
     <View style={{ gap: SPACE.md }}>
       {answer.escalation ? <EscalationCard result={answer.escalation} emergencyNumber={emergencyNumber} /> : null}
@@ -29,17 +35,18 @@ export function AnswerCard({ answer, emergencyNumber }: { answer: AssistantAnswe
       {answer.headline ? <AppText variant="bodyStrong">{answer.headline}</AppText> : null}
 
       {answer.generated ? (
-        <View style={[styles.block, { backgroundColor: c.primarySoft }]} accessibilityLabel={`AI-generated explanation, created on this device: ${answer.generated.text}`}>
+        <View style={[styles.block, { backgroundColor: c.primarySoft }]} accessibilityLabel={`AI-generated explanation, created ${online ? 'online' : 'on this device'}: ${answer.generated.text}`}>
           <View style={styles.blockHead}>
-            <Ionicons name="sparkles" size={16} color={c.primary} />
+            <Ionicons name={online ? 'cloud-outline' : 'sparkles'} size={16} color={c.primary} />
             <AppText variant="overline" tone="primary">
-              Generated explanation · on this device
+              Generated explanation · {online ? `online (${providerOf(answer.generated.engineLabel)})` : 'on this device'}
             </AppText>
           </View>
           <AppText variant="body">{answer.generated.text}</AppText>
           <AppText variant="caption" tone="subtle">
             {answer.generated.engineLabel}
-            {answer.generated.tokensPerSecond ? ` · ${answer.generated.tokensPerSecond.toFixed(1)} tokens/s` : ''} · Checked against the facts below. May contain mistakes — verify with your records.
+            {answer.generated.tokensPerSecond && !online ? ` · ${answer.generated.tokensPerSecond.toFixed(1)} tokens/s` : ''}
+            {online ? ` · Your question and the facts below were sent to ${providerOf(answer.generated.engineLabel)}.` : ''} · Checked against the facts below. May contain mistakes — verify with your records.
           </AppText>
         </View>
       ) : null}

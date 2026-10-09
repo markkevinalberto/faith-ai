@@ -11,6 +11,8 @@ import { View } from 'react-native';
 
 import { buildLabNote, buildReadingNote, writeCoachMessage, type CoachMessage, type CoachNote } from '@/ai/coach';
 import { engineStore, useEngineState } from '@/ai/inference/engineStore';
+import { getOnlineEngine } from '@/ai/inference/onlineAssistant';
+import type { InferenceEngine } from '@/ai/inference/types';
 import type { Biomarker } from '@/ai/knowledge/biomarkers';
 import type { CheckinAnswer, CheckinQuestion } from '@/ai/knowledge/checkins';
 import { appendLabResultNote } from '@/db/repo/care';
@@ -57,6 +59,7 @@ export function CoachCard({ subject }: { subject: CoachSubject }) {
   const [activeModel, setActiveModel] = useState<string | null | undefined>(undefined);
   const [outcome, setOutcome] = useState<{ message: CoachMessage | null; problem: string | null } | null>(null);
   const [answers, setAnswers] = useState<Record<string, { answer: CheckinAnswer; saved: boolean }>>({});
+  const [online, setOnline] = useState<InferenceEngine | null | undefined>(undefined);
   const asked = useRef(false);
 
   useEffect(() => {
@@ -78,15 +81,44 @@ export function CoachCard({ subject }: { subject: CoachSubject }) {
     });
   }, [db]);
 
+  // The optional online assistant, when it is on and the internet is reachable.
+  useEffect(() => {
+    let alive = true;
+    getOnlineEngine(db)
+      .then((e) => alive && setOnline(e))
+      .catch(() => alive && setOnline(null));
+    return () => {
+      alive = false;
+    };
+  }, [db]);
+
   const ready = engine.status === 'ready' && engine.engine ? engine.engine : null;
   useEffect(() => {
-    if (!note || !ready || asked.current) return;
+    if (!note || online === undefined || asked.current) return;
+    const first = online ?? ready;
+    if (!first) return;
     asked.current = true;
-    listMedications(db, profile.id)
-      .then((meds) => writeCoachMessage(note, ready, { medicationNames: meds.map((m) => m.medication.name) }))
-      .then((r) => setOutcome({ message: r.message, problem: r.message ? null : 'My on-device draft did not pass the safety checks, so here is the checked summary.' }))
-      .catch(() => setOutcome({ message: null, problem: 'The on-device model could not finish, so here is the checked summary.' }));
-  }, [note, ready, db, profile.id]);
+    const run = async () => {
+      const meds = (await listMedications(db, profile.id)).map((m) => m.medication.name);
+      // The online assistant first; if its draft fails, the on-device model gets one try.
+      const engines = [first, ...(online && ready ? [ready] : [])];
+      let problem: string | null = null;
+      for (const e of engines) {
+        try {
+          const r = await writeCoachMessage(note, e, { medicationNames: meds });
+          if (r.message) {
+            setOutcome({ message: r.message, problem: null });
+            return;
+          }
+          problem = 'My draft did not pass the safety checks, so here is the checked summary.';
+        } catch {
+          problem = e.runsOnDevice ? 'The on-device model could not finish, so here is the checked summary.' : 'The online assistant could not be reached, so here is the checked summary.';
+        }
+      }
+      setOutcome({ message: null, problem });
+    };
+    void run();
+  }, [note, ready, online, db, profile.id]);
 
   const answer = (q: CheckinQuestion, a: CheckinAnswer) => {
     setAnswers((prev) => ({ ...prev, [q.id]: { answer: a, saved: false } }));
@@ -109,7 +141,7 @@ export function CoachCard({ subject }: { subject: CoachSubject }) {
   if (note === null) return null;
 
   const message = outcome?.message ?? null;
-  const writing = !outcome && (engine.status === 'loading' || !!ready);
+  const writing = !outcome && (!!online || engine.status === 'loading' || !!ready);
   // Questions are asked one at a time: every answered one, then the next.
   const firstOpen = note.questions.findIndex((q) => !answers[q.id]);
   const shown = firstOpen === -1 ? note.questions : note.questions.slice(0, firstOpen + 1);
@@ -124,7 +156,9 @@ export function CoachCard({ subject }: { subject: CoachSubject }) {
             FAITH
           </AppText>
           <AppText variant="caption" tone="muted">
-            {message ? `Your health assistant · written on this device by ${message.engineLabel.split(' · ')[0]}` : 'Your health assistant · on this device'}
+            {message
+              ? `Your health assistant · written ${message.online ? `online by ${message.engineLabel.split(' · ')[1]?.replace(' (online)', '') ?? 'the online assistant'}` : `on this device by ${message.engineLabel.split(' · ')[0]}`}`
+              : 'Your health assistant · on this device'}
           </AppText>
         </View>
       </View>
@@ -132,7 +166,7 @@ export function CoachCard({ subject }: { subject: CoachSubject }) {
       <SpeechBubble>
         {/* A generated note always contains the checked position phrase (the guard requires it). */}
         <AppText variant="body">{message ? message.text : note.summary}</AppText>
-        {writing ? <InlineLoading label={engine.status === 'loading' ? 'Getting my on-device model ready…' : 'Writing you a note on this device…'} /> : null}
+        {writing ? <InlineLoading label={online ? 'Asking the online assistant…' : engine.status === 'loading' ? 'Getting my on-device model ready…' : 'Writing you a note on this device…'} /> : null}
         {note.tips.length ? (
           <View style={{ gap: SPACE.sm }}>
             <AppText variant="label" tone="primary">
@@ -219,7 +253,11 @@ export function CoachCard({ subject }: { subject: CoachSubject }) {
 
       <AppText variant="caption" tone="subtle" style={{ paddingHorizontal: SPACE.xs }}>
         General tips, draft pending clinical review{note.sources.length ? `. Based on: ${note.sources.join('; ')}` : ''}. They don’t replace advice from your care team.
-        {activeModel === null ? ' Install an on-device model in Settings → On-device AI and FAITH will also write these as a personal note.' : ''}
+        {message?.online
+          ? ' Your result and these tips were sent to the online assistant to write this note.'
+          : activeModel === null
+            ? ' Install an on-device model in Settings → On-device AI and FAITH will also write these as a personal note.'
+            : ''}
       </AppText>
     </View>
   );

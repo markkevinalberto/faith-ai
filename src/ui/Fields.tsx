@@ -21,9 +21,11 @@ export interface TextFieldProps {
   maxLength?: number;
   testID?: string;
   autoFocus?: boolean;
+  /** Hides the text (API keys). */
+  secureTextEntry?: boolean;
 }
 
-export function TextField({ label, value, onChangeText, placeholder, helper, error, keyboardType, multiline, autoCapitalize, suffix, maxLength, testID, autoFocus }: TextFieldProps) {
+export function TextField({ label, value, onChangeText, placeholder, helper, error, keyboardType, multiline, autoCapitalize, suffix, maxLength, testID, autoFocus, secureTextEntry }: TextFieldProps) {
   const { c } = useTheme();
   const type = useType();
   const { scale } = useTextSize();
@@ -46,6 +48,8 @@ export function TextField({ label, value, onChangeText, placeholder, helper, err
           autoCapitalize={autoCapitalize}
           maxLength={maxLength}
           autoFocus={autoFocus}
+          secureTextEntry={secureTextEntry}
+          autoCorrect={secureTextEntry ? false : undefined}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           maxFontSizeMultiplier={MAX_TOTAL_TEXT_SCALE / scale}

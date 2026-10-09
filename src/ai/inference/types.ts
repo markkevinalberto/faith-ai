@@ -67,7 +67,8 @@ export interface InferenceEngine {
   readonly id: string;
   /** Human-readable label shown next to generated text. */
   readonly label: string;
-  readonly runsOnDevice: true;
+  /** False for the optional online assistant, which sends the prompt to a cloud API. */
+  readonly runsOnDevice: boolean;
   isReady(): boolean;
   generate(messages: ChatMessage[], opts: GenerateOptions): Promise<GenerateResult>;
   stop(): Promise<void>;

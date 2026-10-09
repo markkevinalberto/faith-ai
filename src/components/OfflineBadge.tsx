@@ -13,6 +13,7 @@ import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { engineStore, useEngineState } from '@/ai/inference/engineStore';
 import { localModels, useLocalModels } from '@/ai/inference/localModels';
 import { getModelSpec, type ModelSpec } from '@/ai/inference/modelCatalog';
+import { PROVIDERS, loadOnlineSettings, useOnlineSettings } from '@/ai/inference/onlineAssistant';
 import { SETTINGS, setSetting } from '@/db/repo/profiles';
 import { useApp } from '@/state/AppState';
 import { Button } from '@/ui/Button';
@@ -73,11 +74,20 @@ export function OfflineBadge() {
     };
   }, [open]);
 
+  const onlineSettings = useOnlineSettings();
+  useEffect(() => {
+    void loadOnlineSettings(db).catch(() => undefined);
+  }, [db]);
+
   const offline = connection === 'airplane' || connection === 'offline';
   const here = Platform.OS === 'web' ? 'in this browser' : 'on this phone';
-  const headline = offline ? `${connection === 'airplane' ? 'Airplane mode' : 'Offline'} · AI ${here}` : `Private · AI runs ${here}`;
+  // The online assistant only counts when it is on, has a key and the internet is reachable.
+  const onlineOn = !!onlineSettings?.enabled && !!onlineSettings?.hasKey;
+  const usingOnline = onlineOn && !offline;
+  const providerLabel = PROVIDERS[onlineSettings?.provider ?? 'groq'].label;
+  const headline = usingOnline ? `Online assistant · ${providerLabel}` : offline ? `${connection === 'airplane' ? 'Airplane mode' : 'Offline'} · AI ${here}` : `Private · AI runs ${here}`;
   const active = engine.modelId ? getModelSpec(engine.modelId) : null;
-  const modelLine =
+  const localLine =
     engine.status === 'ready' && active
       ? shortName(active)
       : engine.status === 'loading'
@@ -85,6 +95,7 @@ export function OfflineBadge() {
         : engine.status === 'error'
           ? 'Model failed to load · answers from your records'
           : 'No chat model · answers from your records';
+  const modelLine = usingOnline ? `${onlineSettings?.model ?? ''} · this device as backup` : localLine;
   const fg = offline ? c.success : c.primary;
 
   const choose = async (spec: ModelSpec) => {
@@ -112,7 +123,7 @@ export function OfflineBadge() {
         accessibilityHint={open ? 'Hides the on-device AI details' : 'Shows the on-device AI details and model choice'}
         onPress={() => setOpen(!open)}
         style={({ pressed }) => [styles.head, pressed && { opacity: 0.8 }]}>
-        <Ionicons name={connection === 'airplane' ? 'airplane' : offline ? 'cloud-offline' : 'shield-checkmark'} size={20} color={fg} />
+        <Ionicons name={usingOnline ? 'cloud-outline' : connection === 'airplane' ? 'airplane' : offline ? 'cloud-offline' : 'shield-checkmark'} size={20} color={fg} />
         <View style={{ flex: 1 }}>
           <AppText variant="label" style={{ color: fg }}>
             {headline}
@@ -161,6 +172,18 @@ export function OfflineBadge() {
               })}
             </View>
           )}
+
+          <AppText variant="label" style={{ marginTop: SPACE.xs }}>
+            Online assistant
+          </AppText>
+          <AppText variant="caption" tone="muted">
+            {onlineOn
+              ? usingOnline
+                ? `On · ${providerLabel} ${onlineSettings?.model ?? ''}. Your question and the facts shown are sent there; FAITH checks the answer before showing it.`
+                : 'On, but paused while offline. Answers come from this device.'
+              : 'Off. FAITH answers only on this device.'}
+          </AppText>
+          <Button title="Online assistant settings" icon="cloud-outline" variant="ghost" size="sm" onPress={() => router.push('/settings/online')} style={{ alignSelf: 'flex-start' }} />
 
           <AppText variant="label" style={{ marginTop: SPACE.xs }}>
             Also running {here}
