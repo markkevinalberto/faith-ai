@@ -26,7 +26,7 @@ import {
   mgdlToGlucoseUnit,
   roundTo,
 } from '../domain/units';
-import { describeBandRange, describeBands, findBiomarker, placeValue } from './knowledge/biomarkers';
+import { describeBandRange, findBiomarker, placeValue } from './knowledge/biomarkers';
 import { searchLibrary, tokenize } from './knowledge/search';
 import { getSource } from './knowledge/sources';
 import type { ReportedValue } from './reported';
@@ -46,6 +46,8 @@ export interface Fact {
 export interface RetrievalResult {
   facts: Fact[];
   limitations: string[];
+  /** Phrases a generated answer must repeat verbatim (checked by the output guard). */
+  mustInclude?: string[];
 }
 
 export interface RetrievalContext {
@@ -516,6 +518,7 @@ const sourceTitles = (ids: string[]) => ids.map((id) => getSource(id)?.title ?? 
 export async function reportedValueFacts(ctx: RetrievalContext, reported: ReportedValue): Promise<RetrievalResult> {
   const facts: Fact[] = [];
   const limitations: string[] = [];
+  const mustInclude: string[] = [];
   const targets = await listTargets(ctx.db, ctx.profile.id);
 
   if (reported.kind === 'lab') {
@@ -525,12 +528,15 @@ export async function reportedValueFacts(ctx: RetrievalContext, reported: Report
     const placement = placeValue(biomarker, value, unit);
     if (placement) {
       const converted = placement.canonicalUnit !== unit ? ` (${placement.canonicalValue} ${placement.canonicalUnit})` : '';
+      const others = placement.reference.bands.filter((b) => b !== placement.band);
+      // The first sentence is written to be copied: small models paraphrase band names into their opposite.
       facts.push({
         id: 'reference',
         kind: 'computed',
         label: `General reference · ${biomarker.name}`,
-        text: `${shown}${converted} falls in: ${placement.band.label} (${describeBandRange(placement.band, placement.canonicalUnit)}). Full scale: ${describeBands(biomarker)}. ${placement.reference.note} General reference, not personalised. Source: ${sourceTitles(placement.reference.sourceIds)}.`,
+        text: `Say it exactly like this: "${shown} is ${placement.band.say} (${describeBandRange(placement.band, placement.canonicalUnit)})." That band is: ${placement.band.label}. It is not ${others.map((b) => `${b.say} (${describeBandRange(b, placement.canonicalUnit)})`).join(', nor ')}.${converted ? ` Converted: ${shown} =${converted}.` : ''} ${placement.reference.note} General reference, not personalised. Source: ${sourceTitles(placement.reference.sourceIds)}.`,
       });
+      mustInclude.push(placement.band.say);
     } else if (biomarker.reference) {
       limitations.push(`I couldn't compare ${shown} with the reference scale, which uses ${biomarker.units[0]}.`);
     } else {
@@ -550,7 +556,7 @@ export async function reportedValueFacts(ctx: RetrievalContext, reported: Report
     } else {
       limitations.push(`No earlier ${biomarker.name} result is recorded in FAITH yet, so there is nothing to compare with.`);
     }
-    return { facts, limitations };
+    return { facts, limitations, mustInclude };
   }
 
   const r = reported.reading;
@@ -564,12 +570,13 @@ export async function reportedValueFacts(ctx: RetrievalContext, reported: Report
     if (target) {
       const position = classifyAgainst(mgdl, target);
       facts.push({ id: 'target', kind: 'computed', label: 'Compared with your target', text: `${describePosition(position, target)} of ${glucoseRange(target.low, target.high, ctx)}. Target source: ${target.sourceLabel}.` });
+      mustInclude.push(position);
     } else {
       limitations.push('Tell me when it was taken (fasting, before or after a meal, bedtime) and I can compare it with the right target.');
     }
     const recent = await glucoseFacts(ctx, 7, targets);
     facts.push(...recent.facts.filter((f) => f.id === 'glucose.summary' || f.id === 'glucose.latest').slice(0, 2));
-    return { facts, limitations };
+    return { facts, limitations, mustInclude };
   }
   if (r.type === 'blood_pressure') {
     facts.push({ id: 'reported', kind: 'record', label: 'You told me · Blood pressure', text: `${formatBloodPressure(r.systolic, r.diastolic)}${r.pulse ? `, pulse ${r.pulse} bpm` : ''}, mentioned just now (not saved yet).` });

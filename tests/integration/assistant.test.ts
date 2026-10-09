@@ -163,22 +163,26 @@ describe('values the person states in the chat', () => {
     expect(a.intent).toBe('reported_value');
     expect(a.refusal).toBeNull();
     expect(a.facts.map((f) => f.label)).toEqual(['You told me · HbA1c', 'General reference · HbA1c', 'Your records · HbA1c']);
-    expect(a.facts[1].text).toMatch(/4\.7 % falls in: below the range ADA uses for prediabetes \(below 5\.7 %\)/);
+    expect(a.facts[1].text).toMatch(/^Say it exactly like this: "4\.7 % is below the prediabetes range \(below 5\.7 %\)\." That band is: below the range ADA uses for prediabetes\. It is not in the prediabetes range \(5\.7 to below 6\.5 %\), nor in the diabetes range/);
     expect(a.facts[1].text).toMatch(/not personalised/);
     expect(a.facts[2].text).toMatch(/7\.4 % on Sep 20, 2026\. 4\.7 % is 2\.7 % lower than that result\./);
     expect(a.references.map((r) => r.id)).toEqual(['hba1c']);
     expect(a.actions).toEqual([{ label: 'Save 4.7 % as HbA1c', href: '/care/lab/add?biomarker=hba1c&value=4.7&unit=%25' }]);
   });
 
-  it('lets the model reply like a nurse when it stays within the facts, and blocks "normal"', async () => {
+  it('lets the model reply like a nurse when it repeats the band exactly, and blocks "normal" or a garbled band', async () => {
     const good = await ask(
       'my hba1c is 4,7',
-      new FakeEngine(() => 'Thank you for telling me. 4.7 % sits below the 5.7 % threshold ADA uses for prediabetes, and it is lower than your last recorded 7.4 %. Shall I save it with today’s date?'),
+      new FakeEngine(() => 'Thank you for telling me. 4.7 % is below the prediabetes range (below 5.7 %), and it is 2.7 % lower than your last recorded 7.4 %. Shall I save it with today’s date?'),
     );
     expect(good.generated?.text).toMatch(/Shall I save it/);
     const bad = await ask('my hba1c is 4,7', new FakeEngine(() => 'Great news, your HbA1c is normal.'));
     expect(bad.generated).toBeNull();
     expect(bad.generationNote).toMatch(/safety_claim/);
+    // A real Qwen2.5 0.5B reply that inverted the band: rejected because the exact band label is missing.
+    const garbled = await ask('my hba1c is 4,7', new FakeEngine(() => 'Your HbA1c reading of 4.7% falls within the range ADA uses for prediabetes, which is below 5.7%.'));
+    expect(garbled.generated).toBeNull();
+    expect(garbled.generationNote).toMatch(/missing_phrase/);
   });
 
   it('compares a stated glucose reading with the right target', async () => {

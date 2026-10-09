@@ -66,6 +66,7 @@
     "ios": "expo start --ios --dev-client",
     "web": "expo start --web",
     "export:web": "expo export --platform web && node scripts/postexport-web.js",
+    "deploy:web": "npm run export:web && cd dist-web && npx vercel@latest link --yes --project faith-ai-web && npx vercel@latest deploy --prod --yes",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "test": "jest",

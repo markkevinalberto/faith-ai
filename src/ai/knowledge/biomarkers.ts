@@ -9,7 +9,14 @@
  * targets set by their clinician, take precedence.
  */
 export interface ReferenceBand {
+  /** Full description of the band, the way the cited source names it (shown in the app). */
   label: string;
+  /**
+   * The short claim to make about a value in this band, e.g. "below the prediabetes range". The
+   * assistant's facts are written around it and the output guard requires it verbatim, because
+   * small models paraphrase long labels into their opposite.
+   */
+  say: string;
   low: number | null;
   high: number | null;
 }
@@ -69,9 +76,9 @@ export const BIOMARKERS: Biomarker[] = [
     convert: (v, u) => (u === '%' ? v : u === 'mmol/mol' ? round(v / 10.929 + 2.15, 1) : null),
     reference: {
       bands: [
-        { label: 'below the range ADA uses for prediabetes', low: null, high: 5.7 },
-        { label: 'the range ADA uses for prediabetes', low: 5.7, high: 6.5 },
-        { label: 'the range ADA uses to diagnose diabetes, when confirmed by repeat testing', low: 6.5, high: null },
+        { label: 'below the range ADA uses for prediabetes', say: 'below the prediabetes range', low: null, high: 5.7 },
+        { label: 'the range ADA uses for prediabetes', say: 'in the prediabetes range', low: 5.7, high: 6.5 },
+        { label: 'the range ADA uses to diagnose diabetes, when confirmed by repeat testing', say: 'in the diabetes range', low: 6.5, high: null },
       ],
       note: 'ADA diagnostic thresholds for people not already diagnosed. For many non-pregnant adults who have diabetes, ADA cites a general goal below 7%; individual goals vary.',
       sourceIds: ['ada-soc'],
@@ -88,10 +95,10 @@ export const BIOMARKERS: Biomarker[] = [
     convert: linear({ 'mg/dL': 1, 'mmol/L': 18.0182 }, 0),
     reference: {
       bands: [
-        { label: 'below 70 mg/dL, the level guidelines treat as low (hypoglycaemia)', low: null, high: 70 },
-        { label: 'the fasting range ADA cites for people without diabetes', low: 70, high: 100 },
-        { label: 'the range ADA uses for prediabetes (impaired fasting glucose)', low: 100, high: 126 },
-        { label: 'the range ADA uses to diagnose diabetes, when confirmed by repeat testing', low: 126, high: null },
+        { label: 'below 70 mg/dL, the level guidelines treat as low (hypoglycaemia)', say: 'in the low (hypoglycaemia) range', low: null, high: 70 },
+        { label: 'the fasting range ADA cites for people without diabetes', say: 'in the range for people without diabetes', low: 70, high: 100 },
+        { label: 'the range ADA uses for prediabetes (impaired fasting glucose)', say: 'in the prediabetes range', low: 100, high: 126 },
+        { label: 'the range ADA uses to diagnose diabetes, when confirmed by repeat testing', say: 'in the diabetes range', low: 126, high: null },
       ],
       note: 'ADA diagnostic thresholds for a fasting laboratory test. For many adults who have diabetes, the general pre-meal target is 80–130 mg/dL (4.4–7.2 mmol/L); your clinician may set another.',
       sourceIds: ['ada-soc'],
@@ -110,9 +117,9 @@ export const BIOMARKERS: Biomarker[] = [
     convert: linear({ 'mg/dL': 1, 'mmol/L': 18.0182 }, 0),
     reference: {
       bands: [
-        { label: 'below 70 mg/dL, the level guidelines treat as low (hypoglycaemia)', low: null, high: 70 },
-        { label: 'below the 200 mg/dL level ADA uses, with symptoms, to diagnose diabetes', low: 70, high: 200 },
-        { label: 'at or above 200 mg/dL, the random-glucose level ADA uses, together with symptoms, to diagnose diabetes', low: 200, high: null },
+        { label: 'below 70 mg/dL, the level guidelines treat as low (hypoglycaemia)', say: 'in the low (hypoglycaemia) range', low: null, high: 70 },
+        { label: 'below the 200 mg/dL level ADA uses, with symptoms, to diagnose diabetes', say: 'below the 200 mg/dL diabetes level', low: 70, high: 200 },
+        { label: 'at or above 200 mg/dL, the random-glucose level ADA uses, together with symptoms, to diagnose diabetes', say: 'at or above the 200 mg/dL diabetes level', low: 200, high: null },
       ],
       note: 'A random reading depends on when you last ate. For many adults who have diabetes, the general after-meal peak target is below 180 mg/dL (10.0 mmol/L).',
       sourceIds: ['ada-soc'],
@@ -131,10 +138,10 @@ export const BIOMARKERS: Biomarker[] = [
     convert: linear({ 'mg/dL': 1, 'mmol/L': 38.67 }, 0),
     reference: {
       bands: [
-        { label: 'below 70 mg/dL, the ADA goal for adults with diabetes and established heart or vessel disease', low: null, high: 70 },
-        { label: 'below 100 mg/dL, the ADA goal for many adults with diabetes without heart disease', low: 70, high: 100 },
-        { label: 'at or above 100 mg/dL, above the general ADA goal for adults with diabetes', low: 100, high: 160 },
-        { label: '160 mg/dL and above, the level NCEP labels high', low: 160, high: null },
+        { label: 'below 70 mg/dL, the ADA goal for adults with diabetes and established heart or vessel disease', say: 'below the 70 mg/dL goal', low: null, high: 70 },
+        { label: 'below 100 mg/dL, the ADA goal for many adults with diabetes without heart disease', say: 'below the 100 mg/dL goal', low: 70, high: 100 },
+        { label: 'at or above 100 mg/dL, above the general ADA goal for adults with diabetes', say: 'above the 100 mg/dL goal', low: 100, high: 160 },
+        { label: '160 mg/dL and above, the level NCEP labels high', say: 'in the high range', low: 160, high: null },
       ],
       note: 'LDL goals depend on overall cardiovascular risk and are set individually; statin decisions are for your clinician.',
       sourceIds: ['ada-soc', 'nhlbi-atp3'],
@@ -151,9 +158,9 @@ export const BIOMARKERS: Biomarker[] = [
     convert: linear({ 'mg/dL': 1, 'mmol/L': 38.67 }, 0),
     reference: {
       bands: [
-        { label: 'below 40 mg/dL, the level NCEP labels low', low: null, high: 40 },
-        { label: '40 to below 60 mg/dL', low: 40, high: 60 },
-        { label: '60 mg/dL and above, the level NCEP labels high (protective)', low: 60, high: null },
+        { label: 'below 40 mg/dL, the level NCEP labels low', say: 'in the low range', low: null, high: 40 },
+        { label: '40 to below 60 mg/dL', say: 'in the middle range', low: 40, high: 60 },
+        { label: '60 mg/dL and above, the level NCEP labels high (protective)', say: 'in the high (protective) range', low: 60, high: null },
       ],
       note: 'ADA cites general goals above 40 mg/dL for men and above 50 mg/dL for women.',
       sourceIds: ['nhlbi-atp3', 'ada-soc'],
@@ -170,10 +177,10 @@ export const BIOMARKERS: Biomarker[] = [
     convert: linear({ 'mg/dL': 1, 'mmol/L': 88.57 }, 0),
     reference: {
       bands: [
-        { label: 'below 150 mg/dL, the level NCEP and ADA cite as the general goal', low: null, high: 150 },
-        { label: '150 to below 200 mg/dL, the range NCEP labels borderline high', low: 150, high: 200 },
-        { label: '200 to below 500 mg/dL, the range NCEP labels high', low: 200, high: 500 },
-        { label: '500 mg/dL and above, the level NCEP labels very high', low: 500, high: null },
+        { label: 'below 150 mg/dL, the level NCEP and ADA cite as the general goal', say: 'below the 150 mg/dL goal', low: null, high: 150 },
+        { label: '150 to below 200 mg/dL, the range NCEP labels borderline high', say: 'in the borderline high range', low: 150, high: 200 },
+        { label: '200 to below 500 mg/dL, the range NCEP labels high', say: 'in the high range', low: 200, high: 500 },
+        { label: '500 mg/dL and above, the level NCEP labels very high', say: 'in the very high range', low: 500, high: null },
       ],
       note: 'Triglycerides are usually measured fasting; a recent meal raises them.',
       sourceIds: ['nhlbi-atp3', 'ada-soc'],
@@ -190,9 +197,9 @@ export const BIOMARKERS: Biomarker[] = [
     convert: linear({ 'mg/dL': 1, 'mmol/L': 38.67 }, 0),
     reference: {
       bands: [
-        { label: 'below 200 mg/dL, the level NCEP labels desirable', low: null, high: 200 },
-        { label: '200 to below 240 mg/dL, the range NCEP labels borderline high', low: 200, high: 240 },
-        { label: '240 mg/dL and above, the level NCEP labels high', low: 240, high: null },
+        { label: 'below 200 mg/dL, the level NCEP labels desirable', say: 'in the desirable range', low: null, high: 200 },
+        { label: '200 to below 240 mg/dL, the range NCEP labels borderline high', say: 'in the borderline high range', low: 200, high: 240 },
+        { label: '240 mg/dL and above, the level NCEP labels high', say: 'in the high range', low: 240, high: null },
       ],
       note: 'Total cholesterol is read together with LDL, HDL and triglycerides.',
       sourceIds: ['nhlbi-atp3'],
@@ -209,9 +216,9 @@ export const BIOMARKERS: Biomarker[] = [
     convert: linear({ 'mg/dL': 1, 'µmol/L': 1 / 88.4 }, 2),
     reference: {
       bands: [
-        { label: 'below the typical adult laboratory range (about 0.6–1.2 mg/dL)', low: null, high: 0.6 },
-        { label: 'within the typical adult laboratory range (about 0.6–1.2 mg/dL)', low: 0.6, high: 1.3 },
-        { label: 'above the typical adult laboratory range (about 0.6–1.2 mg/dL)', low: 1.3, high: null },
+        { label: 'below the typical adult laboratory range (about 0.6–1.2 mg/dL)', say: 'below the typical laboratory range', low: null, high: 0.6 },
+        { label: 'within the typical adult laboratory range (about 0.6–1.2 mg/dL)', say: 'within the typical laboratory range', low: 0.6, high: 1.3 },
+        { label: 'above the typical adult laboratory range (about 0.6–1.2 mg/dL)', say: 'above the typical laboratory range', low: 1.3, high: null },
       ],
       note: 'Creatinine depends on muscle mass, age and sex, and laboratories print their own range; kidney function is judged from eGFR and urine albumin, not creatinine alone.',
       sourceIds: ['medlineplus-labs'],
@@ -227,12 +234,12 @@ export const BIOMARKERS: Biomarker[] = [
     decimals: 0,
     reference: {
       bands: [
-        { label: 'KDIGO G5, kidney failure (below 15)', low: null, high: 15 },
-        { label: 'KDIGO G4, severely decreased (15–29)', low: 15, high: 30 },
-        { label: 'KDIGO G3b, moderately to severely decreased (30–44)', low: 30, high: 45 },
-        { label: 'KDIGO G3a, mildly to moderately decreased (45–59)', low: 45, high: 60 },
-        { label: 'KDIGO G2, mildly decreased (60–89)', low: 60, high: 90 },
-        { label: 'KDIGO G1, 90 and above', low: 90, high: null },
+        { label: 'KDIGO G5, kidney failure (below 15)', say: 'in KDIGO stage G5', low: null, high: 15 },
+        { label: 'KDIGO G4, severely decreased (15–29)', say: 'in KDIGO stage G4', low: 15, high: 30 },
+        { label: 'KDIGO G3b, moderately to severely decreased (30–44)', say: 'in KDIGO stage G3b', low: 30, high: 45 },
+        { label: 'KDIGO G3a, mildly to moderately decreased (45–59)', say: 'in KDIGO stage G3a', low: 45, high: 60 },
+        { label: 'KDIGO G2, mildly decreased (60–89)', say: 'in KDIGO stage G2', low: 60, high: 90 },
+        { label: 'KDIGO G1, 90 and above', say: 'in KDIGO stage G1', low: 90, high: null },
       ],
       note: 'KDIGO stages apply when a result persists for more than 3 months and are read together with urine albumin (UACR). A single result can vary with hydration, diet and muscle mass.',
       sourceIds: ['kdigo-2024'],
@@ -249,9 +256,9 @@ export const BIOMARKERS: Biomarker[] = [
     convert: linear({ 'mg/g': 1, 'mg/mmol': 8.84 }, 0),
     reference: {
       bands: [
-        { label: 'KDIGO A1, below 30 mg/g', low: null, high: 30 },
-        { label: 'KDIGO A2, moderately increased (30–300 mg/g)', low: 30, high: 300 },
-        { label: 'KDIGO A3, severely increased (above 300 mg/g)', low: 300, high: null },
+        { label: 'KDIGO A1, below 30 mg/g', say: 'in KDIGO category A1', low: null, high: 30 },
+        { label: 'KDIGO A2, moderately increased (30–300 mg/g)', say: 'in KDIGO category A2', low: 30, high: 300 },
+        { label: 'KDIGO A3, severely increased (above 300 mg/g)', say: 'in KDIGO category A3', low: 300, high: null },
       ],
       note: 'KDIGO categories apply when a result persists on repeat testing; exercise, infection and fever can raise a single result.',
       sourceIds: ['kdigo-2024', 'ada-soc'],
@@ -268,9 +275,9 @@ export const BIOMARKERS: Biomarker[] = [
     convert: linear({ 'mg/dL': 1, 'mmol/L': 2.8 }, 0),
     reference: {
       bands: [
-        { label: 'below the typical adult laboratory range (about 7–20 mg/dL)', low: null, high: 7 },
-        { label: 'within the typical adult laboratory range (about 7–20 mg/dL)', low: 7, high: 21 },
-        { label: 'above the typical adult laboratory range (about 7–20 mg/dL)', low: 21, high: null },
+        { label: 'below the typical adult laboratory range (about 7–20 mg/dL)', say: 'below the typical laboratory range', low: null, high: 7 },
+        { label: 'within the typical adult laboratory range (about 7–20 mg/dL)', say: 'within the typical laboratory range', low: 7, high: 21 },
+        { label: 'above the typical adult laboratory range (about 7–20 mg/dL)', say: 'above the typical laboratory range', low: 21, high: null },
       ],
       note: 'Laboratories print their own range; dehydration, diet and some medicines change BUN.',
       sourceIds: ['medlineplus-labs'],
@@ -287,9 +294,9 @@ export const BIOMARKERS: Biomarker[] = [
     convert: linear({ 'mg/dL': 1, 'µmol/L': 1 / 59.48 }, 1),
     reference: {
       bands: [
-        { label: 'below the typical adult laboratory range (about 3.5–7.2 mg/dL)', low: null, high: 3.5 },
-        { label: 'within the typical adult laboratory range (about 3.5–7.2 mg/dL)', low: 3.5, high: 7.3 },
-        { label: 'above the typical adult laboratory range (about 3.5–7.2 mg/dL)', low: 7.3, high: null },
+        { label: 'below the typical adult laboratory range (about 3.5–7.2 mg/dL)', say: 'below the typical laboratory range', low: null, high: 3.5 },
+        { label: 'within the typical adult laboratory range (about 3.5–7.2 mg/dL)', say: 'within the typical laboratory range', low: 3.5, high: 7.3 },
+        { label: 'above the typical adult laboratory range (about 3.5–7.2 mg/dL)', say: 'above the typical laboratory range', low: 7.3, high: null },
       ],
       note: 'Typical ranges differ slightly for women and men and between laboratories; the printed range on your report takes precedence.',
       sourceIds: ['medlineplus-labs'],
@@ -305,8 +312,8 @@ export const BIOMARKERS: Biomarker[] = [
     decimals: 0,
     reference: {
       bands: [
-        { label: 'within the typical adult laboratory range (about 7–56 U/L)', low: null, high: 57 },
-        { label: 'above the typical adult laboratory range (about 7–56 U/L)', low: 57, high: null },
+        { label: 'within the typical adult laboratory range (about 7–56 U/L)', say: 'within the typical laboratory range', low: null, high: 57 },
+        { label: 'above the typical adult laboratory range (about 7–56 U/L)', say: 'above the typical laboratory range', low: 57, high: null },
       ],
       note: 'Laboratories print their own range; some medicines and a recent heavy meal or exercise can raise ALT.',
       sourceIds: ['medlineplus-labs'],
@@ -322,8 +329,8 @@ export const BIOMARKERS: Biomarker[] = [
     decimals: 0,
     reference: {
       bands: [
-        { label: 'within the typical adult laboratory range (about 8–33 U/L)', low: null, high: 34 },
-        { label: 'above the typical adult laboratory range (about 8–33 U/L)', low: 34, high: null },
+        { label: 'within the typical adult laboratory range (about 8–33 U/L)', say: 'within the typical laboratory range', low: null, high: 34 },
+        { label: 'above the typical adult laboratory range (about 8–33 U/L)', say: 'above the typical laboratory range', low: 34, high: null },
       ],
       note: 'Laboratories print their own range; AST also rises with muscle injury and intense exercise.',
       sourceIds: ['medlineplus-labs'],
@@ -339,9 +346,9 @@ export const BIOMARKERS: Biomarker[] = [
     decimals: 0,
     reference: {
       bands: [
-        { label: 'below the typical adult laboratory range (135–145 mmol/L)', low: null, high: 135 },
-        { label: 'within the typical adult laboratory range (135–145 mmol/L)', low: 135, high: 146 },
-        { label: 'above the typical adult laboratory range (135–145 mmol/L)', low: 146, high: null },
+        { label: 'below the typical adult laboratory range (135–145 mmol/L)', say: 'below the typical laboratory range', low: null, high: 135 },
+        { label: 'within the typical adult laboratory range (135–145 mmol/L)', say: 'within the typical laboratory range', low: 135, high: 146 },
+        { label: 'above the typical adult laboratory range (135–145 mmol/L)', say: 'above the typical laboratory range', low: 146, high: null },
       ],
       note: 'Laboratories print their own range; fluid balance and some medicines change sodium.',
       sourceIds: ['medlineplus-labs'],
@@ -357,9 +364,9 @@ export const BIOMARKERS: Biomarker[] = [
     decimals: 1,
     reference: {
       bands: [
-        { label: 'below the typical adult laboratory range (3.5–5.0 mmol/L)', low: null, high: 3.5 },
-        { label: 'within the typical adult laboratory range (3.5–5.0 mmol/L)', low: 3.5, high: 5.1 },
-        { label: 'above the typical adult laboratory range (3.5–5.0 mmol/L)', low: 5.1, high: null },
+        { label: 'below the typical adult laboratory range (3.5–5.0 mmol/L)', say: 'below the typical laboratory range', low: null, high: 3.5 },
+        { label: 'within the typical adult laboratory range (3.5–5.0 mmol/L)', say: 'within the typical laboratory range', low: 3.5, high: 5.1 },
+        { label: 'above the typical adult laboratory range (3.5–5.0 mmol/L)', say: 'above the typical laboratory range', low: 5.1, high: null },
       ],
       note: 'Laboratories print their own range; several blood pressure and kidney medicines affect potassium, so results outside the range are for your clinician to judge promptly.',
       sourceIds: ['medlineplus-labs'],
@@ -376,9 +383,9 @@ export const BIOMARKERS: Biomarker[] = [
     convert: linear({ 'g/dL': 1, 'g/L': 0.1 }, 1),
     reference: {
       bands: [
-        { label: "below 12 g/dL, WHO's anaemia threshold for non-pregnant women (13 g/dL for men)", low: null, high: 12 },
-        { label: "between WHO's thresholds for women (12 g/dL) and men (13 g/dL)", low: 12, high: 13 },
-        { label: "at or above WHO's anaemia thresholds for both women and men", low: 13, high: null },
+        { label: "below 12 g/dL, WHO's anaemia threshold for non-pregnant women (13 g/dL for men)", say: 'below the WHO anaemia threshold for women', low: null, high: 12 },
+        { label: "between WHO's thresholds for women (12 g/dL) and men (13 g/dL)", say: 'between the WHO thresholds for women and men', low: 12, high: 13 },
+        { label: "at or above WHO's anaemia thresholds for both women and men", say: 'at or above the WHO anaemia thresholds', low: 13, high: null },
       ],
       note: 'WHO thresholds at sea level for adults; pregnancy and altitude change them.',
       sourceIds: ['who-haemoglobin'],
@@ -394,9 +401,9 @@ export const BIOMARKERS: Biomarker[] = [
     decimals: 2,
     reference: {
       bands: [
-        { label: 'below the typical adult laboratory range (about 0.4–4.0 mIU/L)', low: null, high: 0.4 },
-        { label: 'within the typical adult laboratory range (about 0.4–4.0 mIU/L)', low: 0.4, high: 4.01 },
-        { label: 'above the typical adult laboratory range (about 0.4–4.0 mIU/L)', low: 4.01, high: null },
+        { label: 'below the typical adult laboratory range (about 0.4–4.0 mIU/L)', say: 'below the typical laboratory range', low: null, high: 0.4 },
+        { label: 'within the typical adult laboratory range (about 0.4–4.0 mIU/L)', say: 'within the typical laboratory range', low: 0.4, high: 4.01 },
+        { label: 'above the typical adult laboratory range (about 0.4–4.0 mIU/L)', say: 'above the typical laboratory range', low: 4.01, high: null },
       ],
       note: 'Laboratories print their own range, and targets differ during pregnancy and thyroid treatment.',
       sourceIds: ['medlineplus-labs'],

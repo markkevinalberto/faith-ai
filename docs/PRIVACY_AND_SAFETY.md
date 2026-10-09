@@ -44,11 +44,12 @@ FAITH is a **health organiser and educational assistant, not a medical device**.
    - Clinician-entered targets are labelled with who set them and when.
    - Otherwise a general reference range is shown, labelled "not personalised", with its citation.
    - Wording never claims a reading is "safe".
-5. **Scans and voice never save anything by themselves.**
+5. **Reference scales are general, never a verdict.** The biomarker catalog (`src/ai/knowledge/biomarkers.ts`) positions a value on published scales (ADA, KDIGO, NCEP ATP III, WHO, MedlinePlus typical laboratory ranges). Band labels name the band the way the source does and never say "normal", "safe" or "fine" (unit-tested); every display adds "general reference, not personalised"; the range printed on the person's report and targets set by their clinician take precedence. A value typed into the chat is never saved by the assistant: it offers a button that opens the form pre-filled, and the person saves it.
+6. **Scans and voice never save anything by themselves.**
    - Scanned labels and reports, and spoken readings, only pre-fill a review screen or form. Nothing is stored until you check it and tap Save.
    - When the on-device model helps read a scan, every value it returns must appear word for word in the scanned text. Anything else is discarded and you are told about it (unit-tested).
    - Suggested reminder times come only from the printed frequency (for example "twice daily" → 08:00 and 20:00). They are labelled as a starting point.
-6. **Escalation first.** Emergency phrases (chest pain, stroke signs, trouble breathing, fainting, self-harm and others) short-circuit the assistant into an emergency card with a Call button.
+7. **Escalation first.** Emergency phrases (chest pain, stroke signs, trouble breathing, fainting, self-harm and others) short-circuit the assistant into an emergency card with a Call button.
 
 ### Escalation thresholds (draft, pending clinical review)
 

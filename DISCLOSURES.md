@@ -59,6 +59,9 @@ The offline reference library and the escalation rules paraphrase public guidanc
 - WHO pulse oximetry, IMAI, Basic Emergency Care, HEARTS and adherence publications
 - KDIGO 2024
 - The NGSP/IFCC HbA1c equation
+- NCEP ATP III (NHLBI, 2002) for the lipid categories in the biomarker catalog
+- MedlinePlus (NIH) medical-test pages for typical adult laboratory ranges (creatinine, BUN, uric acid, ALT, AST, sodium, potassium, TSH), always shown as "typical laboratory range" with the report's printed range taking precedence
+- WHO 2024 guideline on haemoglobin cut-offs for anaemia
 
 Every article and rule is labelled **"Draft — pending clinical review"**. See `src/ai/knowledge/sources.ts` for full citations.
 

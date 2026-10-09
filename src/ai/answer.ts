@@ -214,7 +214,7 @@ export async function answerQuestion(p: AnswerParams): Promise<AssistantAnswer> 
       timeoutMs: 90_000,
       onToken: p.onToken,
     });
-    const guard = guardOutput(result.text, buildContextText(question, retrieval.facts, references));
+    const guard = guardOutput(result.text, buildContextText(question, retrieval.facts, references), { requiredPhrases: retrieval.mustInclude });
     if (guard.ok) {
       answer.generated = { text: guard.text, engineLabel: engine.label, durationMs: result.durationMs, tokensPerSecond: result.tokensPerSecond };
     } else {

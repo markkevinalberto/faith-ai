@@ -68,7 +68,12 @@ describe('biomarker catalog', () => {
     for (const b of BIOMARKERS) {
       expect(b.units.length).toBeGreaterThan(0);
       if (!b.reference) continue;
-      for (const band of b.reference.bands) expect(band.label).not.toMatch(/\b(normal|safe|fine|healthy)\b/i);
+      for (const band of b.reference.bands) {
+        expect(band.label).not.toMatch(/\b(normal|safe|fine|healthy)\b/i);
+        expect(band.say).not.toMatch(/\b(normal|safe|fine|healthy)\b/i);
+        expect(band.say.length).toBeLessThan(60);
+      }
+      expect(new Set(b.reference.bands.map((band) => band.say)).size).toBe(b.reference.bands.length);
       for (const id of b.reference.sourceIds) expect(getSource(id)).not.toBeNull();
       // Bands must be ascending and contiguous.
       for (let i = 1; i < b.reference.bands.length; i++) expect(b.reference.bands[i].low).toBe(b.reference.bands[i - 1].high);

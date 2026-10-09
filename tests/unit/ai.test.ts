@@ -108,6 +108,14 @@ describe('output guard', () => {
     expect(g.violations[0]).toMatch(/^unsupported_number:155/);
   });
 
+  it('can require phrases to be repeated verbatim', () => {
+    const ctx = 'FACTS: 4.7 % is below the range ADA uses for prediabetes (below 5.7 %).';
+    expect(guardOutput('Your 4.7 % is below the range ADA uses for prediabetes.', ctx, { requiredPhrases: ['below the range ADA uses for prediabetes'] }).ok).toBe(true);
+    const r = guardOutput('Your 4.7 % is within the range ADA uses for prediabetes.', ctx, { requiredPhrases: ['below the range ADA uses for prediabetes'] });
+    expect(r.ok).toBe(false);
+    expect(r.violations[0]).toMatch(/^missing_phrase:/);
+  });
+
   it('strips chat-template tokens', () => {
     expect(guardOutput('assistant: Hello there.<|im_end|>', context).text).toBe('Hello there.');
   });

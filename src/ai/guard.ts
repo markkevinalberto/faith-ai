@@ -54,11 +54,20 @@ function numbersIn(s: string): string[] {
   return (s.match(/\d+(?:[.,]\d+)?/g) ?? []).map((n) => n.replace(',', '.').replace(/\.0+$/, ''));
 }
 
+export interface GuardOptions {
+  /**
+   * Phrases the output must contain verbatim (case-insensitive), e.g. the exact reference-band label
+   * for a value the person stated. Small models paraphrase "below the prediabetes range" into "within
+   * the prediabetes range"; requiring the label keeps the answer tied to the computed fact.
+   */
+  requiredPhrases?: string[];
+}
+
 /**
  * @param context all text the model was given (facts, references, question). Every number in the
  *                output must appear in the context (small counting numbers up to 10 are allowed).
  */
-export function guardOutput(raw: string, context: string): GuardResult {
+export function guardOutput(raw: string, context: string, options: GuardOptions = {}): GuardResult {
   const text = raw
     .replace(/<\|im_end\|>|<\|endoftext\|>|<\/?s>/g, '')
     .replace(/^\s*(assistant|carely)\s*:\s*/i, '')
@@ -77,5 +86,9 @@ export function guardOutput(raw: string, context: string): GuardResult {
   const allowed = new Set(numbersIn(context));
   const unsupported = numbersIn(text).filter((n) => !allowed.has(n) && !(Number.isInteger(Number(n)) && Number(n) <= 10));
   if (unsupported.length > 0) violations.push(`unsupported_number:${[...new Set(unsupported)].slice(0, 3).join('|')}`);
+  const lower = text.toLowerCase().replace(/\s+/g, ' ');
+  for (const phrase of options.requiredPhrases ?? []) {
+    if (!lower.includes(phrase.toLowerCase().replace(/\s+/g, ' '))) violations.push(`missing_phrase:${phrase.slice(0, 40)}`);
+  }
   return { ok: violations.length === 0, violations, text };
 }
