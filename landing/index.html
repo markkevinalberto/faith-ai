@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="FAITH AI — Family Assistant for Illness, Treatment & Health. A private, offline-first companion for diabetes and blood pressure, with AI that runs on the phone.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="img/icon.png">
+<title>FAITH AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+/* Layout: a phone-first story read top to bottom — thesis hero, the airplane-mode proof, why local,
+   the four on-device features, the safety rules, how an answer is built, disclosures, download. */
+:root {
+  --bg: #F6F5FF;
+  --surface: #FFFFFF;
+  --surface-muted: #EFEDFC;
+  --border: #E1DEF5;
+  --border-strong: #C9C4EC;
+  --fg: #1B1F3B;
+  --fg-muted: #454A6B;
+  --fg-subtle: #5C6080;
+  --primary: #5B4FE0;
+  --primary-soft: #ECEAFF;
+  --on-primary: #FFFFFF;
+  --accent: #3B82F6;
+  --success: #1D7A49;
+  --success-soft: #E3F5EA;
+  --danger: #C0262D;
+  --danger-soft: #FDE8EA;
+  --warning: #8A5300;
+  --warning-soft: #FFF1D6;
+  --hero-a: #5B4FE0;
+  --hero-b: #3B82F6;
+  --glow: rgba(91, 79, 224, 0.18);
+  --shadow: 0 12px 32px rgba(27, 31, 59, 0.08);
+  --font-display: 'Nunito', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-body: 'Atkinson Hyperlegible', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --radius: 22px;
+  --radius-sm: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F1022; --surface: #181A33; --surface-muted: #202344; --border: #2A2D52; --border-strong: #3A3E6B;
+    --fg: #ECEBFF; --fg-muted: #B9B8DA; --fg-subtle: #9E9DC4;
+    --primary: #A39BFF; --primary-soft: #2A2760; --on-primary: #130F3A; --accent: #7FB2FF;
+    --success: #6BD39A; --success-soft: #14332A; --danger: #FF8A8F; --danger-soft: #3D1A20;
+    --warning: #F2B54B; --warning-soft: #3A2C10; --hero-a: #4A41C9; --hero-b: #2F5FC4;
+    --glow: rgba(163, 155, 255, 0.16); --shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F1022; --surface: #181A33; --surface-muted: #202344; --border: #2A2D52; --border-strong: #3A3E6B;
+  --fg: #ECEBFF; --fg-muted: #B9B8DA; --fg-subtle: #9E9DC4;
+  --primary: #A39BFF; --primary-soft: #2A2760; --on-primary: #130F3A; --accent: #7FB2FF;
+  --success: #6BD39A; --success-soft: #14332A; --danger: #FF8A8F; --danger-soft: #3D1A20;
+  --warning: #F2B54B; --warning-soft: #3A2C10; --hero-a: #4A41C9; --hero-b: #2F5FC4;
+  --glow: rgba(163, 155, 255, 0.16); --shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+img { max-width: 100%; height: auto; display: block; }
+a { color: var(--primary); }
+a:focus-visible, button:focus-visible, [role="switch"]:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 8px; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.02em; line-height: 1.12; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(2.2rem, 5.5vw, 3.6rem); }
+h2 { font-size: clamp(1.6rem, 3.4vw, 2.3rem); }
+h3 { font-size: 1.2rem; font-weight: 700; }
+p { margin: 0; }
+.lede { font-size: 1.15rem; color: var(--fg-muted); max-width: 36em; }
+.muted { color: var(--fg-muted); }
+.subtle { color: var(--fg-subtle); font-size: 0.95rem; }
+.eyebrow { font-family: var(--font-display); font-size: 0.78rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--primary); }
+.num { font-variant-numeric: tabular-nums; }
+
+.page { max-width: 1120px; margin-inline: auto; padding-inline: clamp(16px, 4vw, 40px); padding-block: 0; }
+section { padding-block: clamp(48px, 8vw, 88px); border-top: 1px solid var(--border); }
+section:first-of-type { border-top: 0; }
+.section-head { display: grid; gap: 10px; max-width: 46em; margin-bottom: clamp(24px, 4vw, 40px); }
+
+/* Header */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 18px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--fg); }
+.brand img { width: 44px; height: 44px; border-radius: 12px; }
+.brand b { font-family: var(--font-display); font-weight: 800; font-size: 1.25rem; letter-spacing: -0.01em; }
+.brand small { display: block; font-size: 0.78rem; color: var(--fg-subtle); font-weight: 400; margin-top: -2px; }
+.nav { display: flex; gap: 6px 18px; flex-wrap: wrap; font-size: 0.95rem; }
+.nav a { color: var(--fg-muted); text-decoration: none; padding: 6px 2px; }
+.nav a:hover { color: var(--primary); }
+
+/* Hero */
+.hero { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: clamp(24px, 5vw, 64px); align-items: center; padding-block: clamp(24px, 5vw, 56px) clamp(40px, 7vw, 80px); }
+.hero-copy { display: grid; gap: 20px; min-width: 0; }
+.meaning { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; color: var(--fg-muted); }
+.meaning b { color: var(--primary); font-weight: 800; }
+.cta-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.btn { display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 12px 22px; border-radius: 999px; font-family: var(--font-display); font-weight: 800; font-size: 1rem; text-decoration: none; border: 2px solid transparent; cursor: pointer; transition: transform 120ms ease, box-shadow 120ms ease; }
+.btn:hover { transform: translateY(-1px); }
+.btn-primary { background: linear-gradient(135deg, var(--hero-a), var(--hero-b)); color: #FFFFFF; box-shadow: 0 10px 24px var(--glow); }
+.btn-secondary { background: var(--surface); color: var(--primary); border-color: var(--border-strong); }
+.btn svg { width: 20px; height: 20px; flex: none; }
+.fineprint { display: flex; gap: 8px 18px; flex-wrap: wrap; font-size: 0.9rem; color: var(--fg-subtle); }
+.hero-art { position: relative; display: grid; place-items: center; min-width: 0; }
+.hero-art::before { content: ""; position: absolute; inset: 8% 6%; border-radius: 48% 52% 46% 54% / 55% 45% 55% 45%; background: radial-gradient(circle at 40% 35%, var(--primary-soft), transparent 70%), linear-gradient(160deg, var(--glow), transparent); filter: blur(2px); }
+.hero-art img { position: relative; width: min(300px, 70vw); }
+.float-card { position: absolute; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); box-shadow: var(--shadow); padding: 10px 14px; font-size: 0.88rem; display: grid; gap: 2px; min-width: 150px; }
+.float-card b { font-family: var(--font-display); }
+.float-card.a { left: 0; top: 12%; }
+.float-card.b { right: 0; bottom: 14%; }
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--success); margin-right: 6px; vertical-align: 1px; }
+
+/* Airplane proof */
+.proof { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.proof-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 18px 22px; border-bottom: 1px solid var(--border); background: var(--surface-muted); }
+.switch-row { display: flex; align-items: center; gap: 12px; }
+.switch { position: relative; width: 58px; height: 32px; border-radius: 999px; border: 0; background: var(--border-strong); cursor: pointer; padding: 0; transition: background 160ms ease; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 2px 6px rgba(0,0,0,0.25); transition: transform 160ms ease; }
+.switch[aria-checked="true"] { background: var(--primary); }
+.switch[aria-checked="true"]::after { transform: translateX(26px); }
+.switch-label { font-family: var(--font-display); font-weight: 800; }
+.status { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; font-size: 0.92rem; font-weight: 700; background: var(--primary-soft); color: var(--primary); }
+.is-offline .status { background: var(--success-soft); color: var(--success); }
+.status svg { width: 16px; height: 16px; }
+.ledger { width: 100%; border-collapse: collapse; }
+.ledger th, .ledger td { padding: 14px 18px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border); }
+.ledger tr:last-child td { border-bottom: 0; }
+.ledger th { font-family: var(--font-display); font-weight: 800; font-size: 0.85rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-subtle); }
+.ledger th:first-child, .ledger td:first-child { width: 40%; }
+.ledger td { font-size: 0.98rem; }
+.ledger .faith { color: var(--fg); }
+.ledger .faith b { color: var(--success); font-family: var(--font-display); }
+.ledger .cloud { color: var(--fg-muted); transition: opacity 200ms ease; }
+.ledger .cloud b { font-family: var(--font-display); color: var(--fg); }
+.is-offline .ledger .cloud { opacity: 0.55; }
+.is-offline .ledger .cloud b { color: var(--danger); }
+.proof-foot { display: flex; align-items: center; gap: 18px; padding: 18px 22px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+.proof-foot img { width: 64px; }
+.proof-foot p { max-width: 48em; }
+.ledger-wrap { overflow-x: auto; }
+
+/* Cards */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.card img { width: 64px; height: 64px; object-fit: contain; }
+.card h3 { margin-top: 6px; }
+
+/* Features */
+.feature { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(20px, 4vw, 48px); align-items: center; padding-block: clamp(20px, 3vw, 32px); }
+.feature + .feature { border-top: 1px dashed var(--border-strong); }
+.feature-copy { display: grid; gap: 12px; min-width: 0; }
+.feature-copy ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; color: var(--fg-muted); }
+.fallback { display: inline-flex; gap: 8px; align-items: baseline; font-size: 0.92rem; color: var(--fg-subtle); }
+.fallback b { font-family: var(--font-display); color: var(--fg-muted); }
+.model-tag { display: inline-flex; align-items: center; gap: 8px; align-self: start; padding: 6px 12px; border-radius: 999px; background: var(--surface-muted); font-size: 0.85rem; font-weight: 700; color: var(--fg-muted); }
+.model-tag svg { width: 14px; height: 14px; color: var(--primary); }
+.feature-visual { min-width: 0; }
+.feature-visual.art { display: grid; place-items: center; }
+.feature-visual.art img { width: min(220px, 60vw); }
+
+/* Ask mock */
+.phone { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; display: grid; gap: 12px; max-width: 420px; margin-inline: auto; width: 100%; }
+.bubble { justify-self: end; max-width: 85%; background: var(--primary); color: var(--on-primary); padding: 10px 16px; border-radius: 18px 18px 6px 18px; font-size: 0.95rem; }
+.block { border-radius: var(--radius-sm); padding: 12px 14px; display: grid; gap: 6px; font-size: 0.9rem; }
+.block-head { font-family: var(--font-display); font-weight: 800; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.block.gen { background: var(--primary-soft); color: var(--fg); }
+.block.gen .block-head { color: var(--primary); }
+.block.rec { background: var(--surface-muted); }
+.block.rec .block-head { color: var(--fg-muted); }
+.block.ref { background: var(--warning-soft); }
+.block.ref .block-head { color: var(--warning); }
+.block small { color: var(--fg-subtle); font-size: 0.8rem; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font-size: 0.82rem; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border-strong); color: var(--fg-muted); background: var(--surface); }
+
+/* Scan mock */
+.scan { display: grid; gap: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; max-width: 420px; margin-inline: auto; width: 100%; }
+.scan .row { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.92rem; }
+.scan .row:last-of-type { border-bottom: 0; }
+.scan .row span:last-child { color: var(--fg-muted); text-align: right; }
+.scan .ai { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--primary); background: var(--primary-soft); padding: 2px 8px; border-radius: 999px; margin-left: 6px; }
+.scan .dropped { font-size: 0.85rem; color: var(--fg-subtle); background: var(--surface-muted); padding: 8px 10px; border-radius: 10px; }
+
+/* Safety */
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+.rule { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px 24px; display: grid; gap: 8px; min-width: 0; }
+.rule h3 { display: flex; gap: 10px; align-items: center; }
+.rule h3 svg { width: 22px; height: 22px; color: var(--success); flex: none; }
+.rule p { color: var(--fg-muted); font-size: 0.98rem; }
+.thresholds { margin-top: 24px; background: var(--danger-soft); border-radius: var(--radius); padding: 20px 24px; display: grid; gap: 8px; }
+.thresholds h3 { color: var(--danger); }
+.thresholds p { color: var(--fg-muted); font-size: 0.95rem; }
+.thresholds ul { margin: 0; padding-left: 1.2em; color: var(--fg); font-size: 0.95rem; display: grid; gap: 4px; }
+
+/* Pipeline */
+.pipeline { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; counter-reset: step; list-style: none; margin: 0; padding: 0; }
+.pipeline li { counter-increment: step; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 18px; display: grid; gap: 6px; min-width: 0; }
+.pipeline li::before { content: counter(step); font-family: var(--font-display); font-weight: 800; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--primary-soft); color: var(--primary); }
+.pipeline b { font-family: var(--font-display); }
+.pipeline span { font-size: 0.9rem; color: var(--fg-muted); }
+
+/* Models */
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.models { width: 100%; border-collapse: collapse; min-width: 640px; }
+.models th, .models td { padding: 14px 18px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.95rem; vertical-align: top; }
+.models th { font-family: var(--font-display); font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-subtle); }
+.models tr:last-child td { border-bottom: 0; }
+.models td b { font-family: var(--font-display); }
+.credits { margin-top: 18px; display: grid; gap: 6px; font-size: 0.95rem; color: var(--fg-muted); max-width: 60em; }
+
+/* Download */
+.download { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: clamp(24px, 5vw, 56px); align-items: start; }
+.steps { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; counter-reset: s; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 34px 1fr; gap: 12px; align-items: start; }
+.steps li::before { content: counter(s); font-family: var(--font-display); font-weight: 800; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--primary); color: var(--on-primary); }
+.steps b { font-family: var(--font-display); display: block; }
+.steps span { color: var(--fg-muted); font-size: 0.95rem; }
+.download-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 26px; display: grid; gap: 14px; box-shadow: var(--shadow); min-width: 0; }
+.download-card .btn { justify-self: start; }
+
+/* Footer */
+footer { border-top: 1px solid var(--border); padding-block: 32px 48px; display: grid; gap: 12px; color: var(--fg-subtle); font-size: 0.9rem; }
+footer p { max-width: 70em; }
+footer .disclaimer { color: var(--fg-muted); background: var(--surface-muted); padding: 14px 16px; border-radius: var(--radius-sm); }
+
+@media (max-width: 860px) {
+  .hero, .feature, .download { grid-template-columns: 1fr; }
+  .hero-art { order: -1; }
+  .feature-visual { order: -1; }
+  .float-card.a { left: 2%; top: 4%; }
+  .float-card.b { right: 2%; bottom: 4%; }
+}
+/* On phones the three-column ledger becomes a stack of labelled rows instead of scrolling sideways. */
+@media (max-width: 640px) {
+  .ledger, .ledger tbody, .ledger tr, .ledger td { display: block; width: auto; }
+  .ledger thead { display: none; }
+  .ledger tr { padding: 14px 18px; border-bottom: 1px solid var(--border); display: grid; gap: 6px; }
+  .ledger tr:last-child { border-bottom: 0; }
+  .ledger td { padding: 0; border: 0; }
+  .ledger td:first-child { font-family: var(--font-display); font-weight: 800; }
+  .ledger td.faith::before { content: "FAITH · "; color: var(--fg-subtle); font-weight: 700; }
+  .ledger td.cloud::before { content: "Cloud-only · "; color: var(--fg-subtle); font-weight: 700; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn, .switch, .switch::after, .ledger .cloud { transition: none; }
+  .btn:hover { transform: none; }
+}
+</style>
+</head>
+<body>
+
+
+<div class="page">
+  <header class="top">
+    <a class="brand" href="#top" id="top">
+      <img src="img/icon.png" alt="" width="44" height="44">
+      <span><b>FAITH AI</b><small>Family Assistant for Illness, Treatment &amp; Health</small></span>
+    </a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#why">Why local</a>
+      <a href="#features">What it does</a>
+      <a href="#safety">Safety</a>
+      <a href="#models">Models</a>
+      <a href="#download">Download</a>
+    </nav>
+  </header>
+
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="hero-copy">
+      <p class="eyebrow">AppBuildersPH Hackathon 2026 · Local AI</p>
+      <h1 id="hero-title">Your health, in your hands. Even offline.</h1>
+      <p class="meaning"><b>F</b>amily <b>A</b>ssistant for <b>I</b>llness, <b>T</b>reatment &amp; <b>H</b>ealth</p>
+      <p class="lede">A private companion for people living with diabetes, high blood pressure and other long-term conditions. One profile per family member, dose reminders, readings on a real time axis, and an assistant you can ask about it all, with AI that runs on the phone, not in the cloud.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" id="apk-link" href="#download">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+          Download for Android
+        </a>
+        <a class="btn btn-secondary" href="#features">See what it does</a>
+      </div>
+      <div class="fineprint">
+        <span>Android 8 or newer</span>
+        <span>No account, no server</span>
+        <span>Encrypted on the phone</span>
+      </div>
+    </div>
+    <div class="hero-art">
+      <img src="img/mascot-hero.png" alt="FAITH, the nurse mascot, waving" width="291" height="404">
+      <div class="float-card a"><b><span class="dot"></span>Offline</b><span class="subtle">AI running on this phone</span></div>
+      <div class="float-card b"><b class="num">130/85 mmHg</b><span class="subtle">“blood pressure 130 over 85” — logged by voice</span></div>
+    </div>
+  </section>
+
+  <section id="why" aria-labelledby="why-title">
+    <div class="section-head">
+      <p class="eyebrow">The challenge</p>
+      <h2 id="why-title">Still useful when the cloud disappears</h2>
+      <p class="lede">Flip airplane mode. A cloud-only assistant goes dark. FAITH keeps answering, reading, listening and searching, because every model is on the phone.</p>
+    </div>
+    <div class="proof is-offline" id="proof">
+      <div class="proof-bar">
+        <div class="switch-row">
+          <button class="switch" id="airplane" type="button" role="switch" aria-checked="true" aria-labelledby="airplane-label"></button>
+          <span class="switch-label" id="airplane-label">Airplane mode</span>
+        </div>
+        <span class="status" id="conn-state">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>
+          <span id="conn-text">Airplane mode · AI running on this phone</span>
+        </span>
+      </div>
+      <div class="ledger-wrap">
+        <table class="ledger">
+          <thead>
+            <tr><th scope="col">What you want to do</th><th scope="col">FAITH</th><th scope="col">Cloud-only assistant</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Ask “how has my glucose been this week?”</td>
+              <td class="faith"><b>Works.</b> Answers from the records on your phone.</td>
+              <td class="cloud" data-off="No connection, no answer." data-on="Works, after uploading your question and your records."><b></b> <span></span></td>
+            </tr>
+            <tr>
+              <td>Read a pharmacy label into the medication list</td>
+              <td class="faith"><b>Works.</b> Text recognised on the phone.</td>
+              <td class="cloud" data-off="No connection, no answer." data-on="Works, after uploading the photo of your prescription."><b></b> <span></span></td>
+            </tr>
+            <tr>
+              <td>Say “blood pressure 130 over 85, pulse 72”</td>
+              <td class="faith"><b>Works.</b> Speech transcribed on the phone.</td>
+              <td class="cloud" data-off="No connection, no answer." data-on="Works, after uploading your voice."><b></b> <span></span></td>
+            </tr>
+            <tr>
+              <td>Find the note where you felt shaky, without remembering the words</td>
+              <td class="faith"><b>Works.</b> Records matched by meaning on the phone.</td>
+              <td class="cloud" data-off="No connection, no answer." data-on="Works, after uploading your notes."><b></b> <span></span></td>
+            </tr>
+            <tr>
+              <td>Your health data leaves the phone</td>
+              <td class="faith"><b>Never.</b> There is no server to send it to.</td>
+              <td class="cloud" data-off="Nothing is sent, because nothing works." data-on="On every request."><b></b> <span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="proof-foot">
+        <img src="img/mascot-offline.png" alt="" width="154" height="214">
+        <p class="muted">The app shows this live. In airplane mode the Ask screen reads <b>“Airplane mode · AI running on this phone”</b>, with a tick beside each local component: the language model, semantic search, Whisper voice and ML Kit scanning.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="local-title">
+    <div class="section-head">
+      <p class="eyebrow">Why local beats cloud here</p>
+      <h2 id="local-title">Health data is the last thing that should need a signal</h2>
+    </div>
+    <div class="cards">
+      <article class="card">
+        <img src="img/feature-shield.png" alt="" width="162" height="176">
+        <h3>Private by construction</h3>
+        <p class="muted">Records, voice and photos of prescriptions never leave the phone. The database is encrypted with SQLCipher and the key lives in the Android Keystore. No analytics, no crash reporting, no account.</p>
+      </article>
+      <article class="card">
+        <img src="img/feature-ai-globe.png" alt="" width="158" height="176">
+        <h3>Works where care happens</h3>
+        <p class="muted">Clinics with no Wi-Fi, provincial roads, brownouts, a prepaid plan that ran out. The assistant does not care. Models download once, then the internet is optional.</p>
+      </article>
+      <article class="card">
+        <img src="img/feature-bell.png" alt="" width="160" height="170">
+        <h3>Free to run, forever</h3>
+        <p class="muted">No per-question cost and no subscription. Dose reminders are local notifications that survive a reboot. A phone with 3 GB of RAM can run the smaller models.</p>
+      </article>
+      <article class="card">
+        <img src="img/mascot-thinking.png" alt="" width="216" height="358">
+        <h3>Grounded in your own records</h3>
+        <p class="muted">Every number in an answer is computed by tested code from what you recorded. The language model only rephrases, and an output guard rejects anything it invents.</p>
+      </article>
+    </div>
+  </section>
+
+  <section id="features" aria-labelledby="features-title">
+    <div class="section-head">
+      <p class="eyebrow">What the AI does, on the phone</p>
+      <h2 id="features-title">Four things that keep working</h2>
+      <p class="lede">Each one is optional and each one has a non-AI fallback, so the app is useful on any phone and even better with the models installed.</p>
+    </div>
+
+    <div class="feature">
+      <div class="feature-copy">
+        <h3>Ask FAITH</h3>
+        <p class="muted">Ask about readings, medicines, lab results or appointments in plain words. The answer always has three labelled parts, so you can see what was computed, what came from the library, and what the model wrote.</p>
+        <ul>
+          <li>“I missed my metformin, should I take two?” is refused before the model is called.</li>
+          <li>Statistics, trends and unit conversions (7.2 mmol/L is 130 mg/dL) come from deterministic code.</li>
+          <li>Targets show who set them. Reference ranges are labelled “not personalised”.</li>
+        </ul>
+        <span class="model-tag"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 3h6v2h3a2 2 0 0 1 2 2v3h2v6h-2v3a2 2 0 0 1-2 2h-3v2H9v-2H6a2 2 0 0 1-2-2v-3H2V10h2V7a2 2 0 0 1 2-2h3V3zm0 7v4h6v-4H9z"/></svg>Qwen2.5 1.5B or 0.5B · llama.cpp</span>
+        <span class="fallback"><b>Without the model:</b> the same computed summary and library text, without the rephrasing.</span>
+      </div>
+      <div class="feature-visual">
+        <div class="phone" aria-label="Sample answer from Ask FAITH">
+          <div class="bubble">Summarize my glucose this week</div>
+          <div class="block gen">
+            <span class="block-head">Generated explanation · on this device</span>
+            <p>Over the last 7 days you recorded 8 fasting readings. Your average was 144 mg/dL, with the lowest at 128 and the highest at 160. Seven of the eight were above the fasting target your clinician set, so this is worth mentioning at your review on 20 October.</p>
+            <small>Qwen2.5 1.5B · llama.cpp on this phone · checked by the output guard</small>
+          </div>
+          <div class="block rec">
+            <span class="block-head">From your records</span>
+            <p class="num">Fasting glucose, 7 days: 8 readings · average 144 mg/dL · range 128–160 · 7 of 8 above target 80–130 mg/dL (set by Dr. Example, Sep 2026).</p>
+            <small>Numbers are calculated by FAITH from what you recorded, never by the AI model.</small>
+          </div>
+          <div class="block ref">
+            <span class="block-head">Reference library</span>
+            <p>Fasting glucose · ADA Standards of Care 2025</p>
+            <small>Draft, pending clinical review</small>
+          </div>
+          <div class="chips" aria-label="Suggested questions">
+            <span class="chip">How do I take my medications?</span>
+            <span class="chip">Convert 7.2 mmol/L to mg/dL</span>
+            <span class="chip">Prepare questions for my next appointment</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="feature-copy">
+        <h3>Scan labels and lab reports</h3>
+        <p class="muted">Photograph a pharmacy label or a results table. Text is recognised on the phone, a parser copies what is printed, and the language model fills in only the fields the parser missed.</p>
+        <ul>
+          <li>Every value the model proposes must appear in the scanned text. Anything else is dropped and you are told.</li>
+          <li>Reminder times are suggested from the printed frequency, for example “twice daily” becomes 08:00 and 20:00, and labelled as a starting point.</li>
+          <li>Nothing is saved until you check it. The photo is deleted after scanning unless you keep it with a lab record.</li>
+        </ul>
+        <span class="model-tag"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 4h5v2H6v3H4V4zm11 0h5v5h-2V6h-3V4zM4 15h2v3h3v2H4v-5zm14 0h2v5h-5v-2h3v-3zM7 11h10v2H7z"/></svg>ML Kit text recognition, bundled · Qwen2.5 for gaps</span>
+        <span class="fallback"><b>Without the model:</b> the parser alone, which already reads most printed labels.</span>
+      </div>
+      <div class="feature-visual">
+        <div class="scan" aria-label="Sample label scan review">
+          <span class="block-head" style="color: var(--fg-subtle)">Check what was read</span>
+          <div class="row"><span>Medication</span><span>Metformin HCl</span></div>
+          <div class="row"><span>Strength</span><span class="num">500 mg</span></div>
+          <div class="row"><span>Instructions</span><span>Take 1 tablet twice daily with meals</span></div>
+          <div class="row"><span>Quantity<span class="ai">Filled by on-device AI</span></span><span class="num">60</span></div>
+          <div class="row"><span>Suggested reminders</span><span class="num">08:00 · 20:00</span></div>
+          <div class="dropped">The model also suggested a prescriber name, but that text is not on the label, so FAITH ignored it.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="feature-copy">
+        <h3>Voice questions and voice logging</h3>
+        <p class="muted">Tap the microphone, speak, tap again. Whisper turns it into text on the phone. In the reading form, “sugar 145 fasting” or “weight 72.5 kilos” fills the fields for you to confirm.</p>
+        <ul>
+          <li>Audio is held in memory only, never written to disk, never uploaded.</li>
+          <li>Recording lasts at most 20 seconds and only between your two taps.</li>
+          <li>A spoken reading is a draft. You still press Save.</li>
+        </ul>
+        <span class="model-tag"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>Whisper base.en or tiny.en · whisper.cpp</span>
+        <span class="fallback"><b>Without the model:</b> typing, with the same forms.</span>
+      </div>
+      <div class="feature-visual art">
+        <img src="img/onboard-record-glucose.png" alt="Illustration of recording a glucose reading" width="252" height="244">
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="feature-copy">
+        <h3>Search by meaning</h3>
+        <p class="muted">A small embedding model finds records and library articles that match what you mean, not just the words you used. “Did I ever feel dizzy?” finds the note that says “felt shaky after a long walk”. Keyword matches are always kept too.</p>
+        <ul>
+          <li>Embeddings live in memory and are cleared when you switch profiles.</li>
+          <li>The model is 25 MB and loads in a moment when Ask opens.</li>
+        </ul>
+        <span class="model-tag"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 2a8 8 0 0 1 6.32 12.9l5.39 5.4-1.41 1.4-5.4-5.38A8 8 0 1 1 10 2zm0 2a6 6 0 1 0 0 12 6 6 0 0 0 0-12z"/></svg>all-MiniLM-L6-v2 · llama.cpp</span>
+        <span class="fallback"><b>Without the model:</b> keyword search.</span>
+      </div>
+      <div class="feature-visual art">
+        <img src="img/onboard-add-medication.png" alt="Illustration of the medication list" width="248" height="244">
+      </div>
+    </div>
+  </section>
+
+  <section id="safety" aria-labelledby="safety-title">
+    <div class="section-head">
+      <p class="eyebrow">Built to be safe</p>
+      <h2 id="safety-title">A companion, not a clinician</h2>
+      <p class="lede">FAITH organises and explains. It does not diagnose, prescribe or change treatment, and the code enforces that, not just the wording.</p>
+    </div>
+    <div class="rules">
+      <article class="rule">
+        <h3><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>A dose is never marked taken by itself</h3>
+        <p>Only you can tap “Taken”. The database itself rejects a system-recorded dose. An overdue dose becomes “not confirmed”, never “missed, take it now”.</p>
+      </article>
+      <article class="rule">
+        <h3><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>No dose advice, ever</h3>
+        <p>Questions about doubling, skipping, stopping or making up doses are refused before any model runs. Generated text that contains dose instructions is thrown away.</p>
+      </article>
+      <article class="rule">
+        <h3><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>Numbers are computed, not generated</h3>
+        <p>Averages, ranges, trends, conversions and refill estimates come from unit-tested code. The guard rejects any number in an answer that is not in the facts it was given.</p>
+      </article>
+      <article class="rule">
+        <h3><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>Every target shows its source</h3>
+        <p>A clinician-entered target is labelled with who set it and when. Otherwise you see a general reference range with its citation, and nothing is ever called “safe”.</p>
+      </article>
+    </div>
+    <div class="thresholds">
+      <h3>Escalation comes first</h3>
+      <p>Emergency phrases and dangerous readings short-circuit everything else into a card with steps and a Call button. Thresholds follow ADA, AHA, ISH and WHO guidance and are marked draft, pending clinical review.</p>
+      <ul>
+        <li class="num">Glucose below 54 mg/dL (3.0 mmol/L), or 300 mg/dL (16.7 mmol/L) and above: urgent</li>
+        <li class="num">Blood pressure 180 systolic or 120 diastolic and above: urgent, emergency if there are symptoms</li>
+        <li class="num">Oxygen saturation below 90%, temperature below 35 °C: urgent</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="how" aria-labelledby="how-title">
+    <div class="section-head">
+      <p class="eyebrow">How an answer is built</p>
+      <h2 id="how-title">The model is the last step, not the first</h2>
+    </div>
+    <ol class="pipeline">
+      <li><b>Safety router</b><span>Emergency phrases and dose-change requests are caught here, with no model involved.</span></li>
+      <li><b>Your records</b><span>Readings, medicines, labs and appointments for the active profile only.</span></li>
+      <li><b>Calculations</b><span>Averages, ranges, trends and conversions from tested code.</span></li>
+      <li><b>Library</b><span>Curated articles with sources and review dates, found by keyword and by meaning.</span></li>
+      <li><b>On-device model</b><span>Rephrases the facts into plain language. It cannot add facts.</span></li>
+      <li><b>Output guard</b><span>Checks every number and refuses dose, diagnosis or “you’re fine” language.</span></li>
+    </ol>
+  </section>
+
+  <section id="models" aria-labelledby="models-title">
+    <div class="section-head">
+      <p class="eyebrow">Everything disclosed</p>
+      <h2 id="models-title">Open models, verified before use</h2>
+      <p class="lede">Each download is checked on the phone by size, file header and checksum. Downloading a model is the only time the app uses the internet, and it sends no health data.</p>
+    </div>
+    <div class="table-wrap">
+      <table class="models">
+        <thead>
+          <tr><th scope="col">Model</th><th scope="col">Job</th><th scope="col">Size</th><th scope="col">Licence</th><th scope="col">Runtime</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><b>Qwen2.5 1.5B Instruct</b> Q4_K_M</td><td>Answers, reading scans</td><td class="num">1.12 GB</td><td>Apache-2.0</td><td>llama.cpp via llama.rn</td></tr>
+          <tr><td><b>Qwen2.5 0.5B Instruct</b> Q4_K_M, “Lite”</td><td>Same, for phones with less memory</td><td class="num">491 MB</td><td>Apache-2.0</td><td>llama.cpp via llama.rn</td></tr>
+          <tr><td><b>all-MiniLM-L6-v2</b> Q8_0</td><td>Search by meaning</td><td class="num">25 MB</td><td>Apache-2.0</td><td>llama.cpp via llama.rn</td></tr>
+          <tr><td><b>Whisper base.en</b> or <b>tiny.en</b></td><td>Voice</td><td class="num">148 MB or 78 MB</td><td>MIT</td><td>whisper.cpp via whisper.rn</td></tr>
+          <tr><td><b>ML Kit Text Recognition v2</b></td><td>Label and report scanning</td><td>Inside the app</td><td>ML Kit terms</td><td>Google ML Kit, on device</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="credits">
+      <p>Built with React Native and Expo, SQLite with SQLCipher, and local notifications. Clinical content paraphrases ADA, ISH/ESC, AHA, WHO and KDIGO guidance and is marked draft, pending clinical review.</p>
+      <p>Written with Claude Code as a coding assistant. Artwork made with Google Flow and ChatGPT. Neither is part of the app or called at runtime.</p>
+    </div>
+  </section>
+
+  <section id="download" aria-labelledby="download-title">
+    <div class="download">
+      <div class="section-head" style="margin-bottom: 0">
+        <p class="eyebrow">Try it</p>
+        <h2 id="download-title">Install, add the sample person, switch off the signal</h2>
+        <p class="lede">The APK installs without a store. A fictional sample profile with 90 days of data lets you explore every screen before entering anything real.</p>
+        <ol class="steps">
+          <li><b>Download the APK on your Android phone</b><span>Android 8 or newer, 64-bit. If asked, allow installs from your browser.</span></li>
+          <li><b>Open FAITH and add the sample data profile</b><span>Everything is labelled as sample data and no reminders are scheduled for it.</span></li>
+          <li><b>Install a model in Settings → On-device AI</b><span>Wi-Fi recommended. Start with the 25 MB search model, then Whisper, then Qwen if the phone has 4 GB of RAM or more.</span></li>
+          <li><b>Turn on airplane mode and ask away</b><span>The Ask screen badge turns green when the phone is offline and the AI is still running.</span></li>
+        </ol>
+      </div>
+      <div class="download-card">
+        <h3>FAITH AI for Android</h3>
+        <p class="muted">Preview build from the hackathon branch. Free, no account.</p>
+        <a class="btn btn-primary" id="apk-link-2" href="#download">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+          Download the APK
+        </a>
+        <p class="subtle" id="apk-note">Build in progress. The link appears here as soon as it is ready.</p>
+        <p class="subtle">Models download from huggingface.co when you choose them. No internet at the venue? Copy a model file to the phone and use “Import model file”.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p class="disclaimer"><b>FAITH AI is a health organiser and educational assistant, not a medical device.</b> It does not diagnose, prescribe or change treatment. All thresholds, reference ranges and library articles are drafts pending review by a licensed clinician. In an emergency, call your local emergency number.</p>
+    <p>Built during AppBuildersPH Hackathon 2026 for the Local AI theme. FAITH stands for Family Assistant for Illness, Treatment &amp; Health.</p>
+  </footer>
+</div>
+
+<script>
+(function () {
+  var proof = document.getElementById('proof');
+  var sw = document.getElementById('airplane');
+  var text = document.getElementById('conn-text');
+  var status = document.getElementById('conn-state');
+  var cells = Array.prototype.slice.call(document.querySelectorAll('.ledger .cloud'));
+  var iconOff = '<path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>';
+  var iconOn = '<path d="M12 4a9 9 0 0 1 9 9h-2a7 7 0 0 0-14 0H3a9 9 0 0 1 9-9zm0 5a4 4 0 0 1 4 4h-2a2 2 0 0 0-4 0H8a4 4 0 0 1 4-4zm0 5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3z"/>';
+  function render(offline) {
+    sw.setAttribute('aria-checked', offline ? 'true' : 'false');
+    proof.classList.toggle('is-offline', offline);
+    text.textContent = offline ? 'Airplane mode · AI running on this phone' : 'Online · AI still runs on this phone';
+    status.querySelector('svg').innerHTML = offline ? iconOff : iconOn;
+    cells.forEach(function (cell) {
+      var b = cell.querySelector('b');
+      var s = cell.querySelector('span');
+      if (offline) { b.textContent = 'Unavailable.'; s.textContent = cell.getAttribute('data-off'); }
+      else { b.textContent = 'Works.'; s.textContent = cell.getAttribute('data-on'); }
+    });
+  }
+  sw.addEventListener('click', function () { render(sw.getAttribute('aria-checked') !== 'true'); });
+  render(true);
+})();
+</script>
+
+</body>
+</html>

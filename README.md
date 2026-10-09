@@ -91,6 +91,7 @@ docs/           Implementation plan, Android build and device testing, privacy a
 - [Privacy, data handling and medical safety](docs/PRIVACY_AND_SAFETY.md)
 - [Disclosures: models, libraries, tools](DISCLOSURES.md)
 - [Demo script](docs/DEMO_SCRIPT.md)
+- Landing page: [`landing/`](landing/) is a static site (`index.html` plus `img/`), deployable to any static host. `faith-landing.html` is the source fragment; `node landing/make-index.js` regenerates `index.html` from it.
 
 ## Known limitations
 - **Some artwork is still a placeholder.** The five mascot poses are sharp transparent cut-outs from the character sheet. The other illustrations (3D icons, empty states, contextual mascot scenes) are 2× upscales cropped from the design board, so they look soft on high-density screens. Replace any of them with a full-resolution export of the same file name, and update its pixel size in `src/ui/Illustration.tsx`.
