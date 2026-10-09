@@ -1,7 +1,9 @@
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { Alert, Platform, View } from 'react-native';
 
+import { parseVoiceReading } from '@/ai/voice/voiceCommands';
+import { VoiceButton } from '@/components/VoiceButton';
 import { listTargets } from '@/db/repo/profiles';
 import { addReading, deleteReading, getReading, listCustomTypes, updateReading, type ReadingInput } from '@/db/repo/vitals';
 import { evaluateReading, type EscalationResult } from '@/domain/escalation';
@@ -15,7 +17,7 @@ import { EscalationCard } from '@/ui/EscalationCard';
 import { Banner, InlineLoading } from '@/ui/Feedback';
 import { Illustration } from '@/ui/Illustration';
 import { ChipSelect, DateTimeField, SegmentedControl, TextField } from '@/ui/Fields';
-import { FormFooter, Screen } from '@/ui/Layout';
+import { Card, FormFooter, Screen } from '@/ui/Layout';
 import { AppText } from '@/ui/Text';
 import { SPACE } from '@/ui/theme';
 import { BP_CONTEXT_OPTIONS, GLUCOSE_CONTEXT_OPTIONS, VITAL_META, VITAL_ORDER, assessReading, positionPill } from '@/ui/vitals';
@@ -57,6 +59,7 @@ function ReadingForm({ params, existing, customTypes }: { params: Params; existi
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [saved, setSaved] = useState<{ escalation: EscalationResult | null; pill: { label: string; tone: 'success' | 'warning' } | null } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [heard, setHeard] = useState<{ text: string; understood: boolean } | null>(null);
   const kindOptions = [
     ...VITAL_ORDER.map((t) => ({ value: t as string, label: VITAL_META[t].short })),
     ...customTypes.map((t) => ({ value: `custom:${t.id}`, label: t.name })),
@@ -167,6 +170,29 @@ function ReadingForm({ params, existing, customTypes }: { params: Params; existi
     );
   }
 
+  /** Pre-fills the form from a spoken sentence. Nothing is saved until the user taps Save. */
+  const applyVoice = (text: string) => {
+    const r = parseVoiceReading(text);
+    setHeard({ text, understood: !!r });
+    if (!r) return;
+    setErrors({});
+    setCustomTypeId(null);
+    setKind(r.type);
+    setContext(null);
+    if (r.type === 'blood_pressure') {
+      setSystolic(String(r.systolic));
+      setDiastolic(String(r.diastolic));
+      setPulse(r.pulse !== null ? String(r.pulse) : '');
+      return;
+    }
+    setValue(String(r.value));
+    if (r.type === 'glucose') {
+      if (r.unit) setGlucoseUnit(r.unit);
+      setContext(r.context);
+    } else if (r.type === 'weight' && r.unit) setWeightUnit(r.unit);
+    else if (r.type === 'temperature' && r.unit) setTempUnit(r.unit);
+  };
+
   const switchGlucoseUnit = (u: GlucoseUnit) => {
     const n = parseDecimal(value);
     if (n !== null && u !== glucoseUnit) {
@@ -187,6 +213,19 @@ function ReadingForm({ params, existing, customTypes }: { params: Params; existi
         </FormFooter>
       }>
       <Stack.Screen options={{ title: editing ? 'Edit reading' : 'Add reading' }} />
+      {!editing && Platform.OS !== 'web' ? (
+        <Card style={{ gap: SPACE.sm }}>
+          <VoiceButton label="Say your reading" size={48} showLabel onTranscript={applyVoice} />
+          <AppText variant="caption" tone="muted">
+            For example “blood pressure 130 over 85, pulse 72” or “sugar 145 fasting”. Transcribed on this phone; check the fields before saving.
+          </AppText>
+          {heard ? (
+            <AppText variant="caption" tone={heard.understood ? 'success' : 'warning'}>
+              Heard: “{heard.text}”{heard.understood ? ' — form filled below.' : ' — no reading found. Try again or type it.'}
+            </AppText>
+          ) : null}
+        </Card>
+      ) : null}
       {!editing ? (
         <ChipSelect
           label="What are you recording?"

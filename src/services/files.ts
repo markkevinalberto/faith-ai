@@ -28,24 +28,40 @@ export interface StoredDocument {
   sizeBytes: number | null;
 }
 
+/** Copies a temporary file (picker/camera cache) into private storage, then removes the temporary copy. */
+async function storeTempFile(profileId: string, uri: string, ext: string, title: string, mimeType: string | null): Promise<StoredDocument> {
+  const dir = new Directory(Paths.document, DOCS_ROOT, profileId);
+  if (!dir.exists) dir.create({ intermediates: true, idempotent: true });
+  const fileName = `${newId()}.${ext.toLowerCase()}`;
+  const dest = new File(dir, fileName);
+  await new File(uri).copy(dest);
+  discardTempFile(uri);
+  return { title: title.slice(0, 80) || 'Document', relativePath: `${DOCS_ROOT}/${profileId}/${fileName}`, mimeType, sizeBytes: dest.size };
+}
+
+/** Deletes a temporary file such as a scanned photo in the cache. Failures are ignored. */
+export function discardTempFile(uri: string): void {
+  try {
+    const f = new File(uri);
+    if (f.exists) f.delete();
+  } catch {
+    // The OS clears the cache eventually.
+  }
+}
+
 /** Lets the user pick a PDF or image and copies it into private storage for `profileId`. */
 export async function pickAndStoreDocument(profileId: string): Promise<StoredDocument | null> {
   const picked = await DocumentPicker.getDocumentAsync({ type: ['application/pdf', 'image/*'], copyToCacheDirectory: true, multiple: false });
   if (picked.canceled || !picked.assets?.[0]) return null;
   const asset = picked.assets[0];
-  const dir = new Directory(Paths.document, DOCS_ROOT, profileId);
-  if (!dir.exists) dir.create({ intermediates: true, idempotent: true });
-  const ext = (/\.([A-Za-z0-9]{1,8})$/.exec(asset.name)?.[1] ?? (asset.mimeType === 'application/pdf' ? 'pdf' : 'jpg')).toLowerCase();
-  const fileName = `${newId()}.${ext}`;
-  const dest = new File(dir, fileName);
-  const src = new File(asset.uri);
-  await src.copy(dest);
-  try {
-    src.delete();
-  } catch {
-    // The picker's cache copy is cleared by the OS eventually.
-  }
-  return { title: asset.name.replace(/\.[^.]+$/, '').slice(0, 80) || 'Document', relativePath: `${DOCS_ROOT}/${profileId}/${fileName}`, mimeType: asset.mimeType ?? null, sizeBytes: dest.size };
+  const ext = /\.([A-Za-z0-9]{1,8})$/.exec(asset.name)?.[1] ?? (asset.mimeType === 'application/pdf' ? 'pdf' : 'jpg');
+  return storeTempFile(profileId, asset.uri, ext, asset.name.replace(/\.[^.]+$/, ''), asset.mimeType ?? null);
+}
+
+/** Keeps a scanned photo as a private attachment. */
+export async function storeScannedImage(profileId: string, uri: string, title: string, mimeType: string | null): Promise<StoredDocument> {
+  const ext = /\.([A-Za-z0-9]{1,8})(?:\?.*)?$/.exec(uri)?.[1] ?? 'jpg';
+  return storeTempFile(profileId, uri, ext, title, mimeType);
 }
 
 export function deleteDocumentFile(relativePath: string): void {

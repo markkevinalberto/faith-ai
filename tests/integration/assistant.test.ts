@@ -157,6 +157,41 @@ describe('with an on-device engine', () => {
   });
 });
 
+describe('semantic search with an on-device embedding model', () => {
+  /** Fake embedder: concept vectors, so "stomach" ≈ "nausea" without sharing a keyword. */
+  const CONCEPTS = [
+    ['stomach', 'nausea', 'queasy', 'tummy'],
+    ['dentist', 'teeth', 'tooth', 'dental'],
+    ['glucose', 'sugar'],
+  ];
+  const embedder = {
+    id: 'fake-embedder',
+    embed: async (texts: string[]) => texts.map((t) => CONCEPTS.map((words) => words.filter((w) => t.toLowerCase().includes(w)).length + 0.001)),
+  };
+
+  beforeEach(async () => {
+    await addReading(db, profile.id, { type: 'glucose', value: 140, valueCanonical: 140, unit: 'mg/dL', context: 'after_meal', measuredAt: '2026-10-08T12:00:00.000Z', timezone: 'UTC', notes: 'Felt queasy after lunch' });
+    await createAppointment(db, profile.id, { title: 'Dental cleaning', startsAt: '2026-11-02T02:00:00.000Z', timezone: 'UTC' });
+  });
+
+  it('finds records related by meaning that keyword search misses', async () => {
+    const keywordOnly = await ask('Have I had any stomach trouble?');
+    expect(keywordOnly.searchMode).toBe('keyword');
+    expect(keywordOnly.facts.some((f) => f.text.includes('queasy'))).toBe(false);
+
+    const semantic = await answerQuestion({ db, profile, question: 'Have I had any stomach trouble?', now: NOW, timeZone: 'UTC', embedder });
+    expect(semantic.searchMode).toBe('semantic');
+    expect(semantic.facts.some((f) => f.text.includes('queasy'))).toBe(true);
+    expect(semantic.facts.some((f) => f.label.includes('Dental'))).toBe(false);
+  });
+
+  it('still answers from keywords when the embedder fails', async () => {
+    const broken = { id: 'broken', embed: async () => Promise.reject(new Error('model crashed')) };
+    const a = await answerQuestion({ db, profile, question: 'When is my dental cleaning?', now: NOW, timeZone: 'UTC', embedder: broken });
+    expect(a.facts.length).toBeGreaterThan(0);
+  });
+});
+
 describe('profile isolation in the assistant', () => {
   it('never answers with another profile’s records', async () => {
     const other = await makeProfile(db, 'Test Person B', 'UTC');

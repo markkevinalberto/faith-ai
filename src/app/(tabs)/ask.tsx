@@ -6,9 +6,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SUGGESTED_QUESTIONS, answerQuestion, type AssistantAnswer } from '@/ai/answer';
 import { engineStore, useEngineState } from '@/ai/inference/engineStore';
+import { localModels } from '@/ai/inference/localModels';
 import { getModelSpec } from '@/ai/inference/modelCatalog';
 import { AnswerCard } from '@/components/AnswerCard';
 import { DemoBanner } from '@/components/AppChrome';
+import { OfflineBadge } from '@/components/OfflineBadge';
+import { VoiceButton, type VoicePhase } from '@/components/VoiceButton';
 import { SETTINGS, getSetting } from '@/db/repo/profiles';
 import { useApp, useProfile } from '@/state/AppState';
 import { friendlyError } from '@/state/hooks';
@@ -35,6 +38,7 @@ export default function Ask() {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
+  const [voice, setVoice] = useState<VoicePhase>('idle');
   const scroll = useRef<ScrollView>(null);
   const handledQ = useRef<string | null>(null);
 
@@ -47,6 +51,8 @@ export default function Ask() {
     void getSetting(db, SETTINGS.activeModelId).then((id) => {
       if (id && engineStore.get().status === 'none') void engineStore.loadById(id);
     });
+    // Warm the small embedding model so the first semantic search is quick.
+    void localModels.getEmbedder();
   }, [db]);
 
   const ask = async (text: string) => {
@@ -58,6 +64,7 @@ export default function Ask() {
     setBusy(true);
     try {
       const state = engineStore.get();
+      const embedder = await localModels.getEmbedder();
       let tokens = 0;
       const answer = await answerQuestion({
         db,
@@ -66,6 +73,7 @@ export default function Ask() {
         now: new Date(),
         timeZone,
         engine: state.status === 'ready' ? state.engine : null,
+        embedder,
         // Raw tokens are NOT displayed before the safety guard runs; only progress is shown.
         onToken: () => {
           tokens += 1;
@@ -90,14 +98,6 @@ export default function Ask() {
   }, [params.q]);
 
   const spec = engine.modelId ? getModelSpec(engine.modelId) : null;
-  const modelLabel =
-    engine.status === 'ready'
-      ? `${spec?.name ?? 'Model'} ready · on-device`
-      : engine.status === 'loading'
-        ? `Loading ${spec?.name ?? 'model'}…`
-        : engine.status === 'error'
-          ? 'Model failed to load — using record summaries'
-          : 'No model loaded — record summaries only';
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.bg }}>
@@ -107,12 +107,15 @@ export default function Ask() {
             <AppText variant="display" accessibilityRole="header">
               Ask FAITH
             </AppText>
-            <Pressable accessibilityRole="button" accessibilityHint="Opens on-device AI settings" onPress={() => router.push('/settings/model')} style={[styles.status, { backgroundColor: engine.status === 'ready' ? c.primarySoft : c.surfaceMuted }]}>
-              <Ionicons name={engine.status === 'ready' ? 'hardware-chip' : 'hardware-chip-outline'} size={14} color={engine.status === 'ready' ? c.primary : c.textSubtle} />
-              <AppText variant="caption" tone={engine.status === 'ready' ? 'primary' : 'muted'} numberOfLines={1}>
-                {modelLabel}
-              </AppText>
-            </Pressable>
+            <OfflineBadge />
+            {engine.status === 'error' ? (
+              <Pressable accessibilityRole="button" onPress={() => router.push('/settings/model')} style={styles.status}>
+                <Ionicons name="alert-circle-outline" size={14} color={c.danger} />
+                <AppText variant="caption" tone="danger" numberOfLines={1}>
+                  {spec?.name ?? 'Model'} failed to load — using record summaries
+                </AppText>
+              </Pressable>
+            ) : null}
           </View>
         </View>
         <ScrollView ref={scroll} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
@@ -171,7 +174,7 @@ export default function Ask() {
             <TextInput
               value={input}
               onChangeText={setInput}
-              placeholder="Ask about your health records…"
+              placeholder={voice === 'listening' ? 'Listening… tap ■ when you finish' : voice === 'transcribing' ? 'Transcribing on this phone…' : Platform.OS === 'web' ? 'Ask about your health records…' : 'Ask or tap the mic…'}
               placeholderTextColor={c.textSubtle}
               accessibilityLabel="Your question"
               style={[TYPE.body, { color: c.text, flex: 1, minHeight: 48, maxHeight: 120 }]}
@@ -182,6 +185,7 @@ export default function Ask() {
               returnKeyType="send"
               maxFontSizeMultiplier={1.6}
             />
+            <VoiceButton label="Ask by voice" size={40} showStatus={false} onPhaseChange={setVoice} onTranscript={(text) => void ask(text)} />
             <IconButton icon="arrow-up-circle" label="Send question" tone="primary" size={30} onPress={() => void ask(input)} disabled={busy || !input.trim()} />
           </View>
           <AppText variant="caption" tone="subtle" center>
@@ -195,7 +199,7 @@ export default function Ask() {
 
 const styles = StyleSheet.create({
   header: { paddingHorizontal: SPACE.lg, paddingTop: SPACE.md, paddingBottom: SPACE.sm, flexDirection: 'row' },
-  status: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingHorizontal: SPACE.sm, paddingVertical: 6, borderRadius: RADIUS.pill, marginTop: SPACE.xs, minHeight: 32 },
+  status: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingVertical: 6, marginTop: SPACE.xs, minHeight: 32 },
   scroll: { paddingHorizontal: SPACE.lg, paddingBottom: SPACE.xl },
   inner: { width: '100%', maxWidth: 720, alignSelf: 'center', gap: SPACE.xl },
   intro: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, padding: SPACE.md, borderRadius: RADIUS.lg },

@@ -13,6 +13,7 @@ import { searchLibrary } from './knowledge/search';
 import { buildContextText, buildMessages } from './prompt';
 import { retrieve, type Fact } from './retrieval';
 import { routeQuestion, type Intent } from './router';
+import { hybridLibrarySearch, type Embedder } from './semantic';
 
 export interface AssistantAnswer {
   question: string;
@@ -26,6 +27,8 @@ export interface AssistantAnswer {
   generated: { text: string; engineLabel: string; durationMs: number; tokensPerSecond: number | null } | null;
   generationNote: string | null;
   limitations: string[];
+  /** How records and articles were found: keywords only, or keywords plus on-device embeddings. */
+  searchMode: 'keyword' | 'semantic';
 }
 
 export interface AnswerParams {
@@ -35,6 +38,8 @@ export interface AnswerParams {
   now: Date;
   timeZone: string;
   engine?: InferenceEngine | null;
+  /** Optional on-device embedding model for semantic search. */
+  embedder?: Embedder | null;
   onToken?: (token: string) => void;
 }
 
@@ -91,6 +96,7 @@ export async function answerQuestion(p: AnswerParams): Promise<AssistantAnswer> 
     generated: null,
     generationNote: null,
     limitations: [],
+    searchMode: 'keyword',
   };
 
   if (route.intent === 'emergency') {
@@ -108,13 +114,25 @@ export async function answerQuestion(p: AnswerParams): Promise<AssistantAnswer> 
   }
 
   const ctx = { db: p.db, profile: p.profile, now: p.now, timeZone: p.timeZone };
-  const retrieval = await retrieve(route, question, ctx);
-  const references =
-    route.intent === 'dose_change'
-      ? [getArticle('missed-dose') as KnowledgeArticle]
-      : route.intent === 'prescribe'
-        ? []
-        : searchLibrary(question, route.intent === 'explain_term' ? 2 : 1).map((r) => r.article);
+  const embedder = p.embedder ?? null;
+  const retrieval = await retrieve(route, question, ctx, embedder);
+  let semantic = retrieval.mode === 'semantic';
+  let references: KnowledgeArticle[];
+  if (route.intent === 'dose_change') references = [getArticle('missed-dose') as KnowledgeArticle];
+  else if (route.intent === 'prescribe') references = [];
+  else {
+    const k = route.intent === 'explain_term' ? 2 : 1;
+    references = searchLibrary(question, k).map((r) => r.article);
+    if (embedder) {
+      try {
+        const hybrid = await hybridLibrarySearch(question, embedder, { k });
+        if (hybrid.length) references = hybrid;
+        semantic = true;
+      } catch {
+        // Keyword results stand.
+      }
+    }
+  }
 
   const answer: AssistantAnswer = {
     ...base,
@@ -123,6 +141,7 @@ export async function answerQuestion(p: AnswerParams): Promise<AssistantAnswer> 
     facts: retrieval.facts,
     references,
     limitations: retrieval.limitations,
+    searchMode: semantic ? 'semantic' : 'keyword',
   };
 
   if (!MODEL_INTENTS.includes(route.intent)) return answer;

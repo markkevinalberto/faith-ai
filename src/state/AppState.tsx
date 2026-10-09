@@ -7,6 +7,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { Alert, AppState as RNAppState } from 'react-native';
 
 import { engineStore } from '../ai/inference/engineStore';
+import { localModels } from '../ai/inference/localModels';
+import { sharedEmbeddingCache } from '../ai/semantic';
 import { DatabaseKeyError, destroyDatabase, openAppDatabase, type EncryptionStatus } from '../db/expoDatabase';
 import { SETTINGS, getSetting, listProfiles, setSetting } from '../db/repo/profiles';
 import type { SqlDatabase } from '../db/sql';
@@ -97,6 +99,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const wipe = useCallback(async (db: SqlDatabase | null, keepModels: boolean) => {
     await cancelAllNotifications().catch(() => undefined);
     await engineStore.unload().catch(() => undefined);
+    await localModels.release().catch(() => undefined);
     if (db) await db.close().catch(() => undefined);
     await destroyDatabase();
     deleteAllDocuments();
@@ -156,10 +159,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     markSynced: () => setSyncTick((v) => v + 1),
     setActiveProfile: async (id: string) => {
       await setSetting(db, SETTINGS.activeProfileId, id);
+      // Embedded record text from the previous profile must not linger in memory.
+      sharedEmbeddingCache.clear();
       setActiveId(id);
       setDataVersion((v) => v + 1);
     },
     refreshProfiles: async () => {
+      sharedEmbeddingCache.clear();
       await loadProfiles(db);
       setDataVersion((v) => v + 1);
     },

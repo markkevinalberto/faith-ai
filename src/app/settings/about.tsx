@@ -16,7 +16,10 @@ const STACK = [
   'React Native + Expo SDK 57 (TypeScript, Expo Router)',
   'expo-sqlite with SQLCipher encryption; expo-secure-store for the key',
   'expo-notifications (local only), expo-local-authentication (app lock)',
-  'llama.rn 0.12.9 — React Native bindings for llama.cpp (on-device inference)',
+  'llama.rn 0.12.9 — React Native bindings for llama.cpp (on-device answers and embeddings)',
+  'whisper.rn 0.7.4 — React Native bindings for whisper.cpp (on-device speech-to-text)',
+  'Google ML Kit Text Recognition v2, bundled model (on-device label and report reading) via @react-native-ml-kit/text-recognition',
+  '@fugood/react-native-audio-pcm-stream (microphone, in memory), expo-image-picker (camera), expo-network (offline badge)',
   'react-native-svg (charts), expo-file-system, expo-document-picker, expo-sharing',
   'Jest + Node’s built-in SQLite for automated tests',
 ];

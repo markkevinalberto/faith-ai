@@ -14,7 +14,8 @@
       "bundleIdentifier": "com.faithai.app",
       "supportsTablet": false,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSMicrophoneUsageDescription": "FAITH AI listens only while you tap the voice button. Speech is turned into text on this phone and is never saved or sent."
       }
     },
     "android": {
@@ -32,10 +33,11 @@
         "USE_BIOMETRIC",
         "POST_NOTIFICATIONS",
         "android.permission.USE_BIOMETRIC",
-        "android.permission.USE_FINGERPRINT"
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA"
       ],
       "blockedPermissions": [
-        "android.permission.RECORD_AUDIO",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION"
       ],
@@ -84,14 +86,25 @@
       "expo-sharing",
       "expo-localization",
       "expo-document-picker",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow FAITH AI to open a photo of a medicine label or lab report so it can read the text on this phone.",
+          "cameraPermission": "Allow FAITH AI to photograph a medicine label or lab report. The text is read on this phone and the photo is not uploaded.",
+          "microphonePermission": false
+        }
+      ],
       "@react-native-community/datetimepicker",
       [
         "expo-build-properties",
         {
           "android": {
             "enableProguardInReleaseBuilds": true,
-            "extraProguardRules": "-keep class com.rnllama.** { *; }",
-            "enableMinifyInReleaseBuilds": true
+            "extraProguardRules": "-keep class com.rnllama.** { *; }\n-keep class com.rnwhisper.** { *; }\n-keep class com.imxiqi.rnliveaudiostream.** { *; }\n-keep class com.rnmlkit.** { *; }",
+            "enableMinifyInReleaseBuilds": true,
+            "packagingOptions": {
+              "pickFirst": ["**/libc++_shared.so"]
+            }
           }
         }
       ],

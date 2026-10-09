@@ -1,12 +1,14 @@
 /**
  * On-device AI model manager: compatibility checks, explicit download (or import), verification,
- * loading, and a quick local benchmark that proves inference runs on the phone.
+ * loading, and a quick local benchmark that proves inference runs on the phone. Models are grouped
+ * by job: assistant (LLM), semantic search (embeddings) and voice (Whisper).
  */
 import { useState, useSyncExternalStore } from 'react';
 import { Alert, Platform, View } from 'react-native';
 
 import { engineStore, useEngineState } from '@/ai/inference/engineStore';
-import { MODEL_CATALOG, formatBytes, type ModelSpec } from '@/ai/inference/modelCatalog';
+import { localModels, useLocalModels } from '@/ai/inference/localModels';
+import { MODEL_CATALOG, MODEL_KIND_LABEL, formatBytes, type ModelKind, type ModelSpec } from '@/ai/inference/modelCatalog';
 import { SETTINGS, getSetting, setSetting } from '@/db/repo/profiles';
 import { useApp } from '@/state/AppState';
 import { friendlyError, useQuery } from '@/state/hooks';
@@ -35,6 +37,7 @@ export default function ModelSettings() {
   const { db } = useApp();
   const { c } = useTheme();
   const engine = useEngineState();
+  const helpers = useLocalModels();
   useSyncExternalStore(subscribe, () => snapshot, () => snapshot);
   const [tick, setTick] = useState(0);
   const [bench, setBench] = useState<{ text: string; tps: number | null; ms: number } | null>(null);
@@ -54,10 +57,21 @@ export default function ModelSettings() {
   );
   const refresh = () => setTick((t) => t + 1);
 
+  /** Makes a newly installed model the one in use. */
+  const activate = async (spec: ModelSpec) => {
+    if (spec.kind === 'llm') {
+      await setSetting(db, SETTINGS.activeModelId, spec.id);
+      await engineStore.load(spec);
+    } else {
+      await localModels.release(spec.kind);
+      if (spec.kind === 'embedding') await localModels.getEmbedder();
+    }
+  };
+
   const download = (spec: ModelSpec) =>
     Alert.alert(
       `Download ${spec.name}?`,
-      `${formatBytes(spec.sizeBytes)} from huggingface.co (${spec.license}). This is the only time FAITH uses the internet — no health data is sent. Use Wi-Fi if possible.`,
+      `${formatBytes(spec.sizeBytes)} from huggingface.co (${spec.license}). Downloading models is the only time FAITH uses the internet — no health data is sent. Use Wi-Fi if possible.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -73,8 +87,7 @@ export default function ModelSettings() {
             emit();
             try {
               await handle.promise;
-              await setSetting(db, SETTINGS.activeModelId, spec.id);
-              await engineStore.load(spec);
+              await activate(spec);
             } catch (e) {
               Alert.alert('Download did not complete', friendlyError(e));
             } finally {
@@ -92,8 +105,7 @@ export default function ModelSettings() {
       const mm = await import('@/ai/inference/modelManager');
       const r = await mm.importModelFromStorage();
       if (!r) return;
-      await setSetting(db, SETTINGS.activeModelId, r.spec.id);
-      await engineStore.load(r.spec);
+      await activate(r.spec);
       refresh();
     } catch (e) {
       Alert.alert("Couldn't import model", friendlyError(e));
@@ -114,6 +126,7 @@ export default function ModelSettings() {
         style: 'destructive',
         onPress: async () => {
           if (engine.modelId === spec.id) await engineStore.unload();
+          if (spec.kind !== 'llm') await localModels.release(spec.kind);
           const mm = await import('@/ai/inference/modelManager');
           mm.deleteModel(spec);
           if (info.data?.activeId === spec.id) await setSetting(db, SETTINGS.activeModelId, null);
@@ -160,7 +173,7 @@ export default function ModelSettings() {
         tone="info"
         icon="hardware-chip-outline"
         title="Runs entirely on your phone"
-        message="FAITH uses llama.cpp (via llama.rn) to run a small open model locally. Your questions and records never leave the device, and there is no cloud fallback. Without a model, FAITH still answers from your records."
+        message="FAITH runs open models locally: llama.cpp for answers and semantic search, whisper.cpp for voice, and Google ML Kit for reading labels and reports. Your questions, voice and records never leave the device, and there is no cloud fallback. Every model is optional — without them FAITH still answers from your records."
       />
 
       {engine.status === 'ready' ? (
@@ -198,10 +211,12 @@ export default function ModelSettings() {
         </Card>
       ) : null}
 
-      <Section title="Available models">
-        {info.data?.models.map(({ spec, installed, compat }) => {
+      {(['llm', 'embedding', 'speech'] as ModelKind[]).map((kind) => (
+      <Section key={kind} title={MODEL_KIND_LABEL[kind].title} hint={MODEL_KIND_LABEL[kind].hint}>
+        {info.data?.models.filter((m) => m.spec.kind === kind).map(({ spec, installed, compat }) => {
           const dl = downloads.get(spec.id);
-          const active = engine.modelId === spec.id && engine.status === 'ready';
+          const helper = spec.kind === 'embedding' ? helpers.embedding : spec.kind === 'speech' ? helpers.speech : null;
+          const active = helper ? helper.modelId === spec.id && helper.status === 'ready' : engine.modelId === spec.id && engine.status === 'ready';
           return (
             <Card key={spec.id} style={{ gap: SPACE.sm }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.sm }}>
@@ -235,8 +250,8 @@ export default function ModelSettings() {
                 </View>
               ) : installed ? (
                 <View style={{ flexDirection: 'row', gap: SPACE.sm }}>
-                  {!active ? <Button title="Use this model" icon="play" size="sm" onPress={() => void use(spec)} style={{ flex: 1 }} /> : null}
-                  <Button title="Delete" icon="trash-outline" size="sm" variant="danger" onPress={() => remove(spec)} style={{ flex: active ? 1 : 0.6 }} />
+                  {!active && spec.kind === 'llm' ? <Button title="Use this model" icon="play" size="sm" onPress={() => void use(spec)} style={{ flex: 1 }} /> : null}
+                  <Button title="Delete" icon="trash-outline" size="sm" variant="danger" onPress={() => remove(spec)} style={{ flex: active || spec.kind !== 'llm' ? 1 : 0.6 }} />
                 </View>
               ) : (
                 <Button title={`Download (${formatBytes(spec.sizeBytes)})`} icon="cloud-download-outline" size="sm" variant="secondary" disabled={!compat.canInstall || compat.verdict === 'unsupported'} onPress={() => download(spec)} />
@@ -248,8 +263,9 @@ export default function ModelSettings() {
           );
         })}
       </Section>
+      ))}
 
-      <Section title="No internet at the venue?" hint="Copy a supported .gguf file to the phone (USB or Files app), then import it. It is verified before use.">
+      <Section title="No internet at the venue?" hint="Copy a supported model file (.gguf or Whisper .bin) to the phone by USB or the Files app, then import it. It is verified before use.">
         <Button title="Import model file from this phone" icon="folder-open-outline" variant="secondary" onPress={() => void importFile()} />
       </Section>
     </Screen>

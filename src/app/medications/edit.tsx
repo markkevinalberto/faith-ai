@@ -1,8 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, View } from 'react-native';
 
+import { takeLabelDraft } from '@/ai/scan/draftStore';
 import { syncDoseEvents } from '@/db/repo/doseEvents';
 import { createMedication, getMedication, listMedications, updateMedication, type MedicationInput, type MedicationWithSchedules } from '@/db/repo/medications';
 import { formatLocalTime, localDateKey, pad2 } from '@/domain/time';
@@ -65,6 +66,24 @@ function MedicationForm({ id, loaded }: { id?: string; loaded: MedicationWithSch
   const [status] = useState<'active' | 'paused' | 'stopped'>(m?.status ?? 'active');
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [saving, setSaving] = useState(false);
+  const [fromScan, setFromScan] = useState(false);
+
+  // A reviewed label scan (see medications/scan) pre-fills only the fields it found.
+  useFocusEffect(
+    useCallback(() => {
+      const d = takeLabelDraft();
+      if (!d) return;
+      if (d.name) setName(d.name);
+      if (d.strength) setStrength(d.strength);
+      if (d.form) setForm(MED_FORMS.includes(d.form) ? d.form : 'Other');
+      if (d.instructions) setInstructions(d.instructions);
+      if (d.prescriber) setPrescriber(d.prescriber);
+      if (d.quantity !== null) setSupply(String(d.quantity));
+      if (d.asNeeded) setAsNeeded(true);
+      else if (d.suggestedTimes.length) setTimes(d.suggestedTimes);
+      setFromScan(true);
+    }, []),
+  );
 
   const addTime = () => {
     const pick = (base: Date) => {
@@ -143,7 +162,14 @@ function MedicationForm({ id, loaded }: { id?: string; loaded: MedicationWithSch
   return (
     <Screen edges={[]} keyboard footer={<FormFooter><Button title={editing ? 'Save changes' : 'Add medication'} icon="checkmark" size="lg" loading={saving} onPress={() => void save()} /></FormFooter>}>
       <Stack.Screen options={{ title: editing ? 'Edit medication' : 'Add medication' }} />
-      <Banner tone="info" icon="document-text-outline" message="Enter details exactly as they appear on your prescription or pharmacy label. FAITH records your plan — it doesn’t suggest doses." />
+      {fromScan ? (
+        <Banner tone="warning" icon="scan-outline" title="Filled from your scan" message="Check each field against the label before saving. Reminder times are only a starting point — set them to match your prescriber’s instructions." />
+      ) : (
+        <Banner tone="info" icon="document-text-outline" message="Enter details exactly as they appear on your prescription or pharmacy label. FAITH records your plan — it doesn’t suggest doses." />
+      )}
+      {!editing && Platform.OS !== 'web' ? (
+        <Button title={fromScan ? 'Scan the label again' : 'Scan the label instead'} icon="scan-outline" variant="soft" onPress={() => router.push({ pathname: '/medications/scan', params: { from: 'edit' } })} />
+      ) : null}
       <TextField label="Medication name" value={name} onChangeText={setName} error={errors.name} autoCapitalize="words" placeholder="e.g. Metformin" maxLength={120} />
       <TextField label="Strength" value={strength} onChangeText={setStrength} placeholder="e.g. 500 mg" helper="As printed on the label." maxLength={40} />
       <ChipSelect label="Form" options={MED_FORMS.map((f) => ({ value: f, label: f }))} selected={form ? [form] : []} onToggle={(v) => setForm(form === v ? null : v)} />

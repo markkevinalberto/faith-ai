@@ -58,6 +58,7 @@ export class LlamaRnEngine implements InferenceEngine {
           top_k: 40,
           penalty_repeat: 1.1,
           stop: [...STOP_WORDS, ...(opts.stop ?? [])],
+          ...(opts.jsonSchema ? { response_format: { type: 'json_schema' as const, json_schema: { strict: true, schema: opts.jsonSchema } } } : {}),
         },
         (data) => {
           if (data.token) opts.onToken?.(data.token);

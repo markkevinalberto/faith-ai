@@ -2,9 +2,23 @@
  * On-device model catalog. Sizes and hashes were verified on 2026-10-09 by streaming the files
  * from Hugging Face: SHA-256 matches the repository's published LFS hash; MD5 is used on-device
  * because expo-file-system computes MD5 natively.
+ *
+ * Three kinds of local model, all optional and all running on the phone:
+ * - llm: the chat model that rephrases verified facts and reads scanned text (llama.cpp)
+ * - embedding: sentence embeddings for semantic search (llama.cpp)
+ * - speech: Whisper speech-to-text for voice questions and logging (whisper.cpp)
  */
+export type ModelKind = 'llm' | 'embedding' | 'speech';
+
+export const MODEL_KIND_LABEL: Record<ModelKind, { title: string; hint: string }> = {
+  llm: { title: 'Assistant model', hint: 'Writes plain-language answers from your records and reads scanned labels and reports.' },
+  embedding: { title: 'Search model', hint: 'Finds records and library articles by meaning, not just matching words.' },
+  speech: { title: 'Voice model', hint: 'Turns what you say into text for questions and readings.' },
+};
+
 export interface ModelSpec {
   id: string;
+  kind: ModelKind;
   name: string;
   family: string;
   parameters: string;
@@ -30,6 +44,7 @@ const GB = 1024 ** 3;
 export const MODEL_CATALOG: ModelSpec[] = [
   {
     id: 'qwen2.5-1.5b-instruct-q4_k_m',
+    kind: 'llm',
     name: 'Qwen2.5 1.5B Instruct',
     family: 'Qwen2.5',
     parameters: '1.5B',
@@ -49,6 +64,7 @@ export const MODEL_CATALOG: ModelSpec[] = [
   },
   {
     id: 'qwen2.5-0.5b-instruct-q4_k_m',
+    kind: 'llm',
     name: 'Qwen2.5 0.5B Instruct (Lite)',
     family: 'Qwen2.5',
     parameters: '0.5B',
@@ -66,10 +82,79 @@ export const MODEL_CATALOG: ModelSpec[] = [
     contextLength: 2048,
     description: 'Smaller and faster; simpler wording. For phones with 3–6 GB RAM.',
   },
+  {
+    id: 'all-minilm-l6-v2-q8_0',
+    kind: 'embedding',
+    name: 'all-MiniLM-L6-v2 (semantic search)',
+    family: 'Sentence-Transformers',
+    parameters: '22M',
+    quantization: 'Q8_0 (GGUF)',
+    fileName: 'all-MiniLM-L6-v2-Q8_0.gguf',
+    url: 'https://huggingface.co/second-state/All-MiniLM-L6-v2-Embedding-GGUF/resolve/main/all-MiniLM-L6-v2-Q8_0.gguf',
+    sizeBytes: 25_008_064,
+    md5: '326d2dc327dee2701c9dd6d39bb29144',
+    sha256: '263215c3cadd6e16740741a7624ab4cbb6c8e777688bd5331ecfbf5681c2f8ed',
+    license: 'Apache-2.0',
+    licenseUrl: 'https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2',
+    sourceRepo: 'https://huggingface.co/second-state/All-MiniLM-L6-v2-Embedding-GGUF',
+    minRamBytes: 1 * GB,
+    recommendedRamBytes: 2 * GB,
+    contextLength: 512,
+    description: 'Tiny (25 MB). Lets FAITH find related records and articles by meaning, e.g. “kidney” finds your eGFR and UACR results.',
+  },
+  {
+    id: 'whisper-base.en',
+    kind: 'speech',
+    name: 'Whisper base.en (voice)',
+    family: 'Whisper',
+    parameters: '74M',
+    quantization: 'GGML F16',
+    fileName: 'ggml-base.en.bin',
+    url: 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin',
+    sizeBytes: 147_964_211,
+    md5: '4279db3d7b18d9f6e4d5817a16af4f09',
+    sha256: 'a03779c86df3323075f5e796cb2ce5029f00ec8869eee3fdfb897afe36c6d002',
+    license: 'MIT',
+    licenseUrl: 'https://github.com/openai/whisper/blob/main/LICENSE',
+    sourceRepo: 'https://huggingface.co/ggerganov/whisper.cpp',
+    minRamBytes: 2 * GB,
+    recommendedRamBytes: 4 * GB,
+    contextLength: 0,
+    description: 'English speech-to-text. More accurate with numbers like “130 over 85”.',
+  },
+  {
+    id: 'whisper-tiny.en',
+    kind: 'speech',
+    name: 'Whisper tiny.en (voice, lite)',
+    family: 'Whisper',
+    parameters: '39M',
+    quantization: 'GGML F16',
+    fileName: 'ggml-tiny.en.bin',
+    url: 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en.bin',
+    sizeBytes: 77_704_715,
+    md5: '5c5223266e7bdb9b7554205e739ed174',
+    sha256: '921e4cf8686fdd993dcd081a5da5b6c365bfde1162e72b08d75ac75289920b1f',
+    license: 'MIT',
+    licenseUrl: 'https://github.com/openai/whisper/blob/main/LICENSE',
+    sourceRepo: 'https://huggingface.co/ggerganov/whisper.cpp',
+    minRamBytes: 1 * GB,
+    recommendedRamBytes: 2 * GB,
+    contextLength: 0,
+    description: 'Faster and smaller English speech-to-text, slightly less accurate.',
+  },
 ];
 
 export function getModelSpec(id: string): ModelSpec | null {
   return MODEL_CATALOG.find((m) => m.id === id) ?? null;
+}
+
+export function modelsOfKind(kind: ModelKind): ModelSpec[] {
+  return MODEL_CATALOG.filter((m) => m.kind === kind);
+}
+
+/** First 4 bytes of a valid file: "GGUF" for llama.cpp models, "lmgg" (ggml magic, LE) for Whisper. */
+export function expectedMagic(kind: ModelKind): number[] {
+  return kind === 'speech' ? [0x6c, 0x6d, 0x67, 0x67] : [0x47, 0x47, 0x55, 0x46];
 }
 
 export function formatBytes(bytes: number): string {
@@ -99,7 +184,8 @@ export function assessCompatibility(spec: ModelSpec, device: DeviceProfile, alre
   const reasons: string[] = [];
   if (device.platform === 'web') return { verdict: 'unsupported', reasons: ['On-device models need the Android or iOS app.'], canInstall: false };
   const abiOk = device.cpuArchitectures.length === 0 || device.cpuArchitectures.some((a) => a === 'arm64-v8a' || a === 'x86_64' || a === 'arm64');
-  if (!abiOk) return { verdict: 'unsupported', reasons: ['This processor architecture is not supported by llama.cpp (needs 64-bit ARM or x86_64).'], canInstall: false };
+  const runtime = spec.kind === 'speech' ? 'whisper.cpp' : 'llama.cpp';
+  if (!abiOk) return { verdict: 'unsupported', reasons: [`This processor architecture is not supported by ${runtime} (needs 64-bit ARM or x86_64).`], canInstall: false };
   let verdict: CompatibilityVerdict = 'supported';
   if (device.totalMemoryBytes !== null) {
     if (device.totalMemoryBytes < spec.minRamBytes) {

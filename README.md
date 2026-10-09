@@ -2,7 +2,7 @@
 
 **F**amily **A**ssistant for **I**llness, **T**reatment & **H**ealth. *Your health, in your hands. Even offline.*
 
-**A private, offline-first health companion for people living with diabetes, high blood pressure and other long-term conditions.** It runs on Android first, with iOS to follow, using React Native and Expo. The AI runs **on the phone** through llama.cpp.
+**A private, offline-first health companion for people living with diabetes, high blood pressure and other long-term conditions.** It runs on Android first, with iOS to follow, using React Native and Expo. All of its AI runs **on the phone**: llama.cpp, whisper.cpp and Google ML Kit.
 
 > FAITH is a health organiser and educational assistant, **not a medical device**. It doesn't diagnose, prescribe or change treatment. All clinical thresholds and reference content are drafts pending clinical review.
 
@@ -18,6 +18,24 @@
 | **Reminders** | Local notifications with Taken, Snooze and Skip actions; DST and time-zone aware; reconciled against the database by deterministic IDs |
 | **Privacy** | SQLCipher-encrypted database, key in secure storage, optional biometric or PIN app lock, separate profiles per family member, JSON and CSV export, permanent deletion, no network by default |
 | **Demo mode** | A clearly labelled fictional person with 90 days of realistic data |
+
+## Local AI: still useful when the cloud disappears
+
+Every AI feature runs on the phone and keeps working in airplane mode. Every model is optional, and each feature falls back to a non-AI path.
+
+| Feature | On-device stack | What happens without it |
+|---|---|---|
+| **Ask FAITH** | Qwen2.5 1.5B or 0.5B through llama.cpp, after a deterministic safety router, record retrieval and calculations, with an output guard checking every number | Answers from computed record summaries and the library |
+| **Semantic search** | all-MiniLM-L6-v2 embeddings through llama.cpp. Records and library articles are matched by meaning, so "Did I ever feel dizzy?" finds a note saying "felt shaky after a long walk". Keyword matches are always kept | Keyword search |
+| **Voice** | Whisper base.en or tiny.en through whisper.cpp. Ask questions by voice, or say "blood pressure 130 over 85, pulse 72" to fill the reading form. Audio stays in memory and is never saved | Typing |
+| **Scan labels and lab reports** | ML Kit text recognition (model bundled in the app), then layout reconstruction and tested parsers. The on-device LLM fills only missing fields, with JSON-schema constrained output, and **every value must appear in the scanned text**. You review everything before saving | Manual entry |
+| **Offline proof badge** | Live connection and airplane-mode status next to the local components that are running (LLM, search, voice, OCR) | Not applicable |
+
+**Why local beats cloud here:**
+- Health records, voice and photos of prescriptions never leave the phone.
+- It works in clinics, on the road and during outages.
+- There's no per-request cost or account.
+- Answers stay grounded in the user's own encrypted records.
 
 ## Quick start
 
@@ -41,13 +59,14 @@ npx eas-cli@latest build -p android --profile preview
 
 | Check | Result |
 |---|---|
-| Unit tests (`tests/unit`) | **145 passed**: units, time zones and DST, statistics and trends, schedule generation, dose state machine, reminder reconciliation, escalation, targets, validation, supply, chart scales, router, guard, conversions, library |
-| Integration tests (`tests/integration`, real SQLite through `node:sqlite`) | **50 passed**: migrations (with rollback), persistence, schedule-edit regeneration, time-zone re-timing, profile isolation (composite FKs), export, permanent deletion, reminder reconciliation with a fake notifier, demo seeding, offline assistant (network calls fail the test) |
+| Unit tests (`tests/unit`) | **174 passed**: units, time zones and DST, statistics and trends, schedule generation, dose state machine, reminder reconciliation, escalation, targets, validation, supply, chart scales, router, guard, conversions, library, label and lab-report parsers, OCR layout, grounded AI extraction (invented values are dropped), spoken-reading parser, PCM helpers, semantic ranking and caching |
+| Integration tests (`tests/integration`, real SQLite through `node:sqlite`) | **52 passed**: migrations (with rollback), persistence, schedule-edit regeneration, time-zone re-timing, profile isolation (composite FKs), export, permanent deletion, reminder reconciliation with a fake notifier, demo seeding, offline assistant (network calls fail the test), semantic record search and embedder-failure fallback |
 | `tsc --noEmit` (strict) | Clean |
 | `expo lint` | Clean |
-| `expo-doctor` | 21 of 21 checks passed |
+| `expo-doctor` | Every check passes except the React Native Directory metadata check. It flags `@react-native-ml-kit/text-recognition` (untested on the New Architecture) and `whisper.rn` and `@fugood/react-native-audio-pcm-stream` (no metadata). Legacy native modules run through React Native's interop layer, and the Gradle plugin adds their missing namespaces. Confirm on the device |
 | Web UI walkthrough | Onboarding → sample data → Home → Vitals chart and target band → add reading → safety card → Ask (deterministic answer and dose-change refusal) → all settings screens render |
-| **Physical Android device** | **Not yet run.** SQLCipher, llama.rn inference, notifications and biometrics need an EAS build on the phone. Follow the checklist in the device-testing doc |
+| EAS preview build | First APK (core app and LLM) built successfully on 2026-10-09. A second build adds scan, voice, semantic search and the offline badge |
+| **Physical Android device** | **Not yet run.** SQLCipher, llama.rn and whisper.rn inference, ML Kit OCR, microphone capture, notifications and biometrics need checking on the phone. Follow the checklist in the device-testing doc |
 
 ## Project structure
 
@@ -56,7 +75,9 @@ src/
   app/          Expo Router screens: (tabs) home/vitals/medications/care/ask, details, forms, settings
   domain/       Pure, tested medical and time logic (units, DST, stats, schedules, dose states, reminders, targets, escalation)
   db/           SQL interface, versioned migrations, SQLCipher adapter, profile-scoped repositories, export and deletion
-  ai/           Router, retrieval, knowledge library and sources, prompt, guard, answer orchestrator, llama.rn engine, model manager
+  ai/           Router, retrieval, knowledge library and sources, prompt, guard, answer orchestrator, semantic search,
+                inference (llama.rn engine, embeddings, Whisper, model catalog and manager), scan (OCR, layout, parsers,
+                grounded extraction), voice (recorder, PCM helpers, spoken-reading parser)
   services/     Notifications, reminder sync, files, app lock, demo seed, device locale and time zone
   state/        App providers (database, profile, app lock, reminder coordinator) and data hooks
   ui/           Design tokens, components, time chart, escalation card
@@ -76,4 +97,7 @@ docs/           Implementation plan, Android build and device testing, privacy a
 - The clinical content (escalation thresholds, reference ranges, library) is **draft** and needs review by a licensed clinician before real-world use.
 - iOS hasn't been built yet. It needs EAS and an Apple developer account; the code avoids Android-only APIs except the date picker, which has an iOS path.
 - Model download speed and inference speed depend on the device. Speeds in the docs are estimates until measured with the in-app test.
+- OCR quality depends on the photo. Handwritten prescriptions and multi-column reports may need manual correction, which the review screens allow.
+- Voice is English-only (Whisper `.en` models). The spoken-reading parser understands common phrasings, and anything it doesn't understand is left for you to type.
+- The ML Kit wrapper bundles the Latin, Chinese, Devanagari, Japanese and Korean recognisers, which adds about 20–30 MB to the APK. FAITH uses only Latin.
 - Web preview only: charts use a window-size estimate before layout. No encryption, notifications or native AI on web.

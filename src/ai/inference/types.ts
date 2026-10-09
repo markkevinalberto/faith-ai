@@ -13,6 +13,8 @@ export interface GenerateOptions {
   stop?: string[];
   onToken?: (token: string) => void;
   timeoutMs?: number;
+  /** Constrain output to JSON matching this schema (grammar-constrained decoding). */
+  jsonSchema?: object;
 }
 
 export interface GenerateResult {

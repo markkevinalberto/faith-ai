@@ -8,7 +8,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { Directory, File, Paths, type DownloadTask } from 'expo-file-system';
 import { Platform } from 'react-native';
 
-import { MODEL_CATALOG, assessCompatibility, type Compatibility, type DeviceProfile, type ModelSpec } from './modelCatalog';
+import { MODEL_CATALOG, assessCompatibility, expectedMagic, type Compatibility, type DeviceProfile, type ModelKind, type ModelSpec } from './modelCatalog';
 
 const MODELS_DIR = 'models';
 
@@ -48,11 +48,11 @@ export function compatibilityFor(spec: ModelSpec): Compatibility {
   return assessCompatibility(spec, readDeviceProfile(), isInstalled(spec));
 }
 
-export function hasGgufHeader(file: File): boolean {
+export function hasExpectedHeader(file: File, kind: ModelKind): boolean {
   const handle = file.open();
   try {
     const bytes = handle.readBytes(4);
-    return bytes[0] === 0x47 && bytes[1] === 0x47 && bytes[2] === 0x55 && bytes[3] === 0x46; // "GGUF"
+    return expectedMagic(kind).every((b, i) => bytes[i] === b);
   } finally {
     handle.close();
   }
@@ -66,7 +66,7 @@ export interface VerifyResult {
 export function verifyModelFile(file: File, spec: ModelSpec): VerifyResult {
   if (!file.exists) return { ok: false, reason: 'File is missing.' };
   if (file.size !== spec.sizeBytes) return { ok: false, reason: `Size mismatch (${file.size} bytes, expected ${spec.sizeBytes}).` };
-  if (!hasGgufHeader(file)) return { ok: false, reason: 'Not a GGUF model file.' };
+  if (!hasExpectedHeader(file, spec.kind)) return { ok: false, reason: spec.kind === 'speech' ? 'Not a Whisper (ggml) model file.' : 'Not a GGUF model file.' };
   const md5 = file.info({ md5: true }).md5 ?? file.md5;
   if (!md5 || md5.toLowerCase() !== spec.md5) return { ok: false, reason: 'Checksum mismatch — the download may be corrupted.' };
   return { ok: true };
@@ -129,7 +129,7 @@ export async function importModelFromStorage(): Promise<ImportResult | null> {
   const spec = MODEL_CATALOG.find((m) => m.sizeBytes === src.size);
   if (!spec) {
     src.delete();
-    throw new Error('This file does not match a supported FAITH model (Qwen2.5 0.5B or 1.5B Instruct Q4_K_M GGUF).');
+    throw new Error(`This file does not match a supported FAITH model (${MODEL_CATALOG.map((m) => m.fileName).join(', ')}).`);
   }
   const check = verifyModelFile(src, spec);
   if (!check.ok) {
@@ -149,8 +149,8 @@ export function deleteModel(spec: ModelSpec): void {
   }
 }
 
-export function installedModels(): ModelSpec[] {
-  return MODEL_CATALOG.filter(isInstalled);
+export function installedModels(kind?: ModelKind): ModelSpec[] {
+  return MODEL_CATALOG.filter((m) => (!kind || m.kind === kind) && isInstalled(m));
 }
 
 export function deleteAllModels(): void {

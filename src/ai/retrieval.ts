@@ -26,8 +26,9 @@ import {
   mgdlToGlucoseUnit,
   roundTo,
 } from '../domain/units';
-import { tokenize } from './knowledge/search';
+import { searchLibrary, tokenize } from './knowledge/search';
 import type { MetricHint, Route } from './router';
+import { RECORD_MIN_SIMILARITY, rankBySimilarity, type Embedder } from './semantic';
 
 export type FactKind = 'record' | 'computed' | 'question';
 
@@ -403,27 +404,87 @@ export async function clinicianQuestionFacts(ctx: RetrievalContext): Promise<Ret
   return { facts, limitations: questions.length === 0 ? ['Your recent records did not raise specific questions — you can still ask your clinician about your targets and plan.'] : [] };
 }
 
-/** Keyword search across the profile's own records (offline fallback for free-form questions). */
-export async function searchRecords(ctx: RetrievalContext, question: string, limit = 8): Promise<RetrievalResult> {
-  const tokens = tokenize(question).filter((t) => t.length >= 3);
-  if (tokens.length === 0) return { facts: [], limitations: [] };
-  const hit = (s: string | null | undefined) => !!s && tokens.some((t) => s.toLowerCase().includes(t));
-  const facts: Fact[] = [];
+/** A searchable snippet of the profile's own records: `text` is what gets matched or embedded. */
+export interface RecordDoc {
+  fact: Fact;
+  text: string;
+}
+
+const joinText = (...parts: (string | null | undefined)[]) => parts.filter(Boolean).join('. ');
+
+export async function recordDocuments(ctx: RetrievalContext): Promise<RecordDoc[]> {
+  const docs: RecordDoc[] = [];
   for (const { medication: m } of await listMedications(ctx.db, ctx.profile.id)) {
-    if (hit(m.name) || hit(m.doseInstructions) || hit(m.notes)) facts.push({ id: `med.${m.id}`, kind: 'record', label: `Medication · ${m.name}`, text: `Instructions as recorded: “${m.doseInstructions || 'none recorded'}”${m.notes ? ` — Notes: ${m.notes}` : ''}` });
+    docs.push({
+      fact: { id: `med.${m.id}`, kind: 'record', label: `Medication · ${m.name}`, text: `Instructions as recorded: “${m.doseInstructions || 'none recorded'}”${m.notes ? ` — Notes: ${m.notes}` : ''}` },
+      text: joinText(`Medication ${m.name}`, m.strength, m.doseInstructions, m.notes),
+    });
   }
   for (const t of await listLabTests(ctx.db, ctx.profile.id)) {
-    if (hit(t.name) || hit(t.preparationNotes) || hit(t.notes)) facts.push({ id: `labtest.${t.id}`, kind: 'record', label: `Lab test · ${t.name}`, text: `Status: ${t.status}.${t.scheduledAt ? ` Scheduled ${fmtWhen(ctx, t.scheduledAt)}.` : ''}${t.preparationNotes ? ` Preparation: ${t.preparationNotes}` : ''}` });
+    docs.push({
+      fact: { id: `labtest.${t.id}`, kind: 'record', label: `Lab test · ${t.name}`, text: `Status: ${t.status}.${t.scheduledAt ? ` Scheduled ${fmtWhen(ctx, t.scheduledAt)}.` : ''}${t.preparationNotes ? ` Preparation: ${t.preparationNotes}` : ''}` },
+      text: joinText(`Lab test ${t.name}`, t.preparationNotes, t.notes),
+    });
   }
   for (const a of await listAppointments(ctx.db, ctx.profile.id)) {
-    if (hit(a.title) || hit(a.clinician) || hit(a.notes) || hit(a.preparationNotes) || hit(a.questions)) facts.push({ id: `appt.${a.id}`, kind: 'record', label: `Appointment · ${a.title}`, text: `${fmtWhen(ctx, a.startsAt)} (${a.status}).${a.notes ? ` Notes: ${a.notes}` : ''}`, at: a.startsAt });
+    docs.push({
+      fact: { id: `appt.${a.id}`, kind: 'record', label: `Appointment · ${a.title}`, text: `${fmtWhen(ctx, a.startsAt)} (${a.status}).${a.notes ? ` Notes: ${a.notes}` : ''}`, at: a.startsAt },
+      text: joinText(`Appointment ${a.title}`, a.clinician, a.notes, a.preparationNotes, a.questions),
+    });
   }
   for (const c of await listConditions(ctx.db, ctx.profile.id)) {
-    if (hit(c.name) || hit(c.notes)) facts.push({ id: `cond.${c.id}`, kind: 'record', label: `Condition · ${c.name}`, text: `Recorded as ${c.status}.${c.diagnosedOn ? ` Since ${formatLocalDate(c.diagnosedOn, ctx.profile.locale)}.` : ''}${c.notes ? ` Notes: ${c.notes}` : ''}` });
+    docs.push({
+      fact: { id: `cond.${c.id}`, kind: 'record', label: `Condition · ${c.name}`, text: `Recorded as ${c.status}.${c.diagnosedOn ? ` Since ${formatLocalDate(c.diagnosedOn, ctx.profile.locale)}.` : ''}${c.notes ? ` Notes: ${c.notes}` : ''}` },
+      text: joinText(`Condition ${c.name}`, c.notes),
+    });
   }
-  const withNotes = (await listReadings(ctx.db, ctx.profile.id, { limit: 500 })).filter((r) => hit(r.notes));
-  for (const r of withNotes.slice(0, 3)) facts.push({ id: `reading.${r.id}`, kind: 'record', label: `Reading note · ${fmtDay(ctx, r.measuredAt)}`, text: r.notes as string, at: r.measuredAt });
-  return { facts: facts.slice(0, limit), limitations: [] };
+  for (const f of (await labFacts(ctx)).facts.filter((x) => x.id.startsWith('lab.'))) {
+    const analyte = f.label.replace(/^Lab · /, '');
+    // Add the library title (e.g. "eGFR (kidney function)") so "kidneys" can find "eGFR".
+    const article = searchLibrary(analyte, 1).find((r) => r.score >= 10)?.article;
+    docs.push({ fact: f, text: joinText(`Lab result ${analyte}`, article?.title) });
+  }
+  const withNotes = (await listReadings(ctx.db, ctx.profile.id, { limit: 500 })).filter((r) => r.notes?.trim());
+  for (const r of withNotes.slice(0, 60)) {
+    docs.push({ fact: { id: `reading.${r.id}`, kind: 'record', label: `Reading note · ${fmtDay(ctx, r.measuredAt)}`, text: r.notes as string, at: r.measuredAt }, text: `Note: ${r.notes}` });
+  }
+  return docs;
+}
+
+/**
+ * Searches the profile's own records for free-form questions. Keyword matches always count; when
+ * an on-device embedding model is available, records related by meaning are added after them.
+ */
+export async function searchRecords(ctx: RetrievalContext, question: string, limit = 8, embedder?: Embedder | null): Promise<RetrievalResult & { mode: 'keyword' | 'semantic' }> {
+  const docs = await recordDocuments(ctx);
+  // Naive plural stemming so "kidneys" matches "kidney".
+  const tokens = tokenize(question)
+    .filter((t) => t.length >= 3)
+    .map((t) => (t.length > 4 && t.endsWith('s') && !t.endsWith('ss') ? t.slice(0, -1) : t));
+  const hit = (d: RecordDoc) => tokens.some((t) => d.text.toLowerCase().includes(t));
+  const keyword = docs.filter(hit);
+  // Keep at most 3 matching reading notes, as before.
+  let notes = 0;
+  const facts = keyword.filter((d) => !d.fact.id.startsWith('reading.') || notes++ < 3).map((d) => d.fact);
+  if (!embedder || docs.length === 0) return { facts: facts.slice(0, limit), limitations: [], mode: 'keyword' };
+  try {
+    const ranked = await rankBySimilarity(
+      embedder,
+      question,
+      docs.map((d) => ({ id: d.fact.id, text: d.text })),
+      { k: 4, minScore: RECORD_MIN_SIMILARITY },
+    );
+    const seen = new Set(facts.map((f) => f.id));
+    for (const r of ranked) {
+      if (seen.has(r.id)) continue;
+      const doc = docs.find((d) => d.fact.id === r.id);
+      if (doc) facts.push(doc.fact);
+      seen.add(r.id);
+    }
+    return { facts: facts.slice(0, limit), limitations: [], mode: 'semantic' };
+  } catch {
+    return { facts: facts.slice(0, limit), limitations: [], mode: 'keyword' };
+  }
 }
 
 export async function metricFacts(ctx: RetrievalContext, metrics: MetricHint[], days: number): Promise<RetrievalResult> {
@@ -443,7 +504,7 @@ export async function metricFacts(ctx: RetrievalContext, metrics: MetricHint[], 
 }
 
 /** Facts for a routed question. */
-export async function retrieve(route: Route, question: string, ctx: RetrievalContext): Promise<RetrievalResult> {
+export async function retrieve(route: Route, question: string, ctx: RetrievalContext, embedder?: Embedder | null): Promise<RetrievalResult & { mode?: 'keyword' | 'semantic' }> {
   switch (route.intent) {
     case 'readings_summary':
       return metricFacts(ctx, route.metrics.length ? route.metrics : ['glucose', 'blood_pressure'], route.timeframeDays);
@@ -468,7 +529,7 @@ export async function retrieve(route: Route, question: string, ctx: RetrievalCon
       return { facts: [], limitations: [] };
     }
     case 'general':
-      return searchRecords(ctx, question);
+      return searchRecords(ctx, question, 8, embedder);
     default:
       return { facts: [], limitations: [] };
   }

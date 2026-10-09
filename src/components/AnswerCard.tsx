@@ -125,6 +125,11 @@ export function AnswerCard({ answer, emergencyNumber }: { answer: AssistantAnswe
           {answer.generationNote}
         </AppText>
       ) : null}
+      {answer.searchMode === 'semantic' ? (
+        <AppText variant="caption" tone="subtle">
+          Records and articles matched by meaning with an on-device embedding model, plus keywords.
+        </AppText>
+      ) : null}
     </View>
   );
 }

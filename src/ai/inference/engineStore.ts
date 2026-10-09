@@ -34,7 +34,7 @@ export const engineStore = {
       set({ status: 'error', error: 'On-device models need the Android or iOS app.' });
       return;
     }
-    if (state.status === 'loading') return;
+    if (spec.kind !== 'llm' || state.status === 'loading') return;
     if (state.status === 'ready' && state.modelId === spec.id) return;
     await engineStore.unload();
     set({ status: 'loading', modelId: spec.id, progress: 0, error: null });

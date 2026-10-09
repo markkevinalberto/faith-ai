@@ -7,11 +7,17 @@
 | Profiles, conditions, targets, medications, schedules, dose events, readings, labs, appointments, reminder jobs, audit trail | `carely.db` (SQLite) in the app's private storage | SQLCipher encryption with a random 256-bit raw key |
 | Database key | expo-secure-store (Android Keystore-backed), `WHEN_UNLOCKED_THIS_DEVICE_ONLY` | Never leaves secure storage and is never logged |
 | Attachments (PDF and image reports) | `documents/<profileId>/<uuid>.<ext>` in private app storage | App sandbox. The DB stores relative paths only, and paths are validated against traversal |
-| AI model files | `models/*.gguf` in private app storage | Not personal data |
+| AI model files | `models/*.gguf` and `models/ggml-*.bin` in private app storage | Not personal data |
+| Voice input | Microphone audio is held **in memory only** while you speak, transcribed by Whisper on the phone, then discarded | Never written to disk and never sent anywhere. Only the transcript is used: as the question, or to pre-fill the reading form for you to confirm |
+| Scanned photos | The camera or gallery image sits in the app cache while it is read by on-device OCR | Deleted after scanning, unless you choose "Keep the photo with this record" for a lab report. It is then stored like any other attachment |
+| Embeddings | Vectors for your record snippets, kept in memory to speed up semantic search | Never persisted. Cleared on profile switch, profile deletion and erase |
 | Exports | Temporary file in the app cache | Deleted after the share sheet closes. The user is warned that the export is **not** encrypted |
 | Scheduled notifications | The OS notification scheduler | Medicine names are hidden by default ("Hide medicine names" is on). Android lock-screen visibility is set to private |
 
-- **No network by default.** There's no account, server, sync, analytics, crash reporting or cloud AI. The only possible request is the model download the user starts.
+- **No network by default.** There's no account, server, sync, analytics, crash reporting or cloud AI. The only possible requests are the model downloads the user starts.
+- **Permissions:**
+  - Camera and microphone are requested only when you first tap Scan or the microphone.
+  - The microphone records only between your two taps, and for at most 20 seconds.
 - **Backups:** `android.allowBackup` is `false`, so Android cloud backup never copies the encrypted database or the key.
 - **Logs:** failures log a generic message (for example "reminder sync failed") and never any record contents.
 - **Retention:** data is kept until the user deletes it. Uninstalling the app removes everything.
@@ -38,7 +44,11 @@ FAITH is a **health organiser and educational assistant, not a medical device**.
    - Clinician-entered targets are labelled with who set them and when.
    - Otherwise a general reference range is shown, labelled "not personalised", with its citation.
    - Wording never claims a reading is "safe".
-5. **Escalation first.** Emergency phrases (chest pain, stroke signs, trouble breathing, fainting, self-harm and others) short-circuit the assistant into an emergency card with a Call button.
+5. **Scans and voice never save anything by themselves.**
+   - Scanned labels and reports, and spoken readings, only pre-fill a review screen or form. Nothing is stored until you check it and tap Save.
+   - When the on-device model helps read a scan, every value it returns must appear word for word in the scanned text. Anything else is discarded and you are told about it (unit-tested).
+   - Suggested reminder times come only from the printed frequency (for example "twice daily" → 08:00 and 20:00). They are labelled as a starting point.
+6. **Escalation first.** Emergency phrases (chest pain, stroke signs, trouble breathing, fainting, self-harm and others) short-circuit the assistant into an emergency card with a Call button.
 
 ### Escalation thresholds (draft, pending clinical review)
 

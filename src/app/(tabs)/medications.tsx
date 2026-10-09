@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 
 import { DemoBanner, ProfileButton } from '@/components/AppChrome';
 import { DoseItem } from '@/components/DoseItem';
@@ -94,6 +94,7 @@ export default function Medications() {
         subtitle="Exactly as prescribed — FAITH never changes your plan."
         right={
           <View style={{ flexDirection: 'row', gap: SPACE.xs }}>
+            {Platform.OS !== 'web' ? <IconButton icon="scan-outline" label="Scan a medicine label" tone="primary" onPress={() => router.push('/medications/scan')} /> : null}
             <IconButton icon="add" label="Add medication" tone="primary" filled onPress={() => router.push('/medications/edit')} />
             <ProfileButton />
           </View>

@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 
 import { DemoBanner, ProfileButton } from '@/components/AppChrome';
 import { AppointmentRow, LabRow } from '@/components/CareItems';
@@ -65,7 +65,10 @@ export default function CarePlan() {
       ) : null}
       {q.data && tab === 'labs' ? (
         <View style={{ gap: SPACE.lg }}>
-          <Button title="Add lab test" icon="add" variant="soft" onPress={() => router.push('/care/lab/edit')} />
+          <View style={{ flexDirection: 'row', gap: SPACE.sm }}>
+            <Button title="Add lab test" icon="add" variant="soft" onPress={() => router.push('/care/lab/edit')} style={{ flex: 1 }} />
+            {Platform.OS !== 'web' ? <Button title="Scan report" icon="scan-outline" variant="soft" onPress={() => router.push('/care/lab/scan')} style={{ flex: 1 }} /> : null}
+          </View>
           {scheduledLabs.length === 0 && doneLabs.length === 0 ? (
             <EmptyState icon="flask-outline" illustration="empty-no-lab-tests" title="No lab tests" message="Schedule tests with preparation notes, then record results exactly as printed on your report." />
           ) : null}
