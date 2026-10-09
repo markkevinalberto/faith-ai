@@ -19,20 +19,21 @@ function defaultTime(): Date {
 }
 
 export default function LabFormLoader() {
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  // `report=1` opens the form in "I already have the report" mode (from the Lab tests tab).
+  const { id, report } = useLocalSearchParams<{ id?: string; report?: string }>();
   const profile = useProfile();
   const existing = useQuery(async (d) => (id ? getLabTest(d, profile.id, id) : null), [profile.id, id]);
   if (id && existing.data === undefined) return <InlineLoading />;
-  return <LabForm key={id ?? 'new'} id={id} initial={existing.data ?? null} />;
+  return <LabForm key={id ?? 'new'} id={id} initial={existing.data ?? null} startWithReport={!id && report === '1'} />;
 }
 
-function LabForm({ id, initial: t }: { id?: string; initial: LabTest | null }) {
+function LabForm({ id, initial: t, startWithReport }: { id?: string; initial: LabTest | null; startWithReport: boolean }) {
   const profile = useProfile();
   const { db, timeZone, locale } = useApp();
   const run = useAction();
   const [name, setName] = useState(t?.name ?? '');
   // New tests: "I already have the report" skips the booking and goes straight to entering values.
-  const [haveReport, setHaveReport] = useState(false);
+  const [haveReport, setHaveReport] = useState(startWithReport);
   const [scheduled, setScheduled] = useState(t ? !!t.scheduledAt : true);
   const [when, setWhen] = useState(() => (t?.scheduledAt ? new Date(t.scheduledAt) : defaultTime()));
   const [location, setLocation] = useState(t?.location ?? '');
@@ -76,7 +77,7 @@ function LabForm({ id, initial: t }: { id?: string; initial: LabTest | null }) {
 
   return (
     <Screen edges={[]} keyboard footer={<FormFooter><Button title={id ? 'Save changes' : haveReport ? 'Next: enter the results' : 'Add lab test'} icon={haveReport ? 'arrow-forward' : 'checkmark'} size="lg" loading={saving} onPress={() => void save()} /></FormFooter>}>
-      <Stack.Screen options={{ title: id ? 'Edit lab test' : 'New lab test' }} />
+      <Stack.Screen options={{ title: id ? 'Edit lab test' : haveReport ? 'Results from a report' : 'New lab test' }} />
       <TextField label="Test name" value={name} onChangeText={setName} error={error} maxLength={100} />
       {!id ? <ChipSelect options={LAB_SUGGESTIONS.map((s) => ({ value: s, label: s }))} selected={[name]} onToggle={setName} /> : null}
       {!id ? (

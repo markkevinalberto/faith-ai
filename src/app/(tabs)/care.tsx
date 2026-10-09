@@ -65,12 +65,13 @@ export default function CarePlan() {
       ) : null}
       {q.data && tab === 'labs' ? (
         <View style={{ gap: SPACE.lg }}>
+          <Button title="Enter results from a report" icon="create-outline" onPress={() => router.push({ pathname: '/care/lab/edit', params: { report: '1' } })} />
           <View style={{ flexDirection: 'row', gap: SPACE.sm }}>
-            <Button title="Add lab test" icon="add" variant="soft" onPress={() => router.push('/care/lab/edit')} style={{ flex: 1 }} />
-            {Platform.OS !== 'web' ? <Button title="Scan report" icon="scan-outline" variant="soft" onPress={() => router.push('/care/lab/scan')} style={{ flex: 1 }} /> : null}
+            <Button title="Schedule a test" icon="calendar-outline" variant="soft" onPress={() => router.push('/care/lab/edit')} style={{ flex: 1 }} />
+            {Platform.OS !== 'web' ? <Button title="Scan a report" icon="scan-outline" variant="soft" onPress={() => router.push('/care/lab/scan')} style={{ flex: 1 }} /> : null}
           </View>
           {scheduledLabs.length === 0 && doneLabs.length === 0 ? (
-            <EmptyState icon="flask-outline" illustration="empty-no-lab-tests" title="No lab tests" message="Schedule tests with preparation notes, then record results exactly as printed on your report." />
+            <EmptyState icon="flask-outline" illustration="empty-no-lab-tests" title="No lab tests yet" message="Type in results from a report you already have, scan the report, or schedule an upcoming test with its preparation notes." />
           ) : null}
           {scheduledLabs.length > 0 ? <Section title="Scheduled">{list(scheduledLabs.map((t) => <LabRow key={t.id} t={t} timeZone={timeZone} locale={locale} />))}</Section> : null}
           {doneLabs.length > 0 ? (
