@@ -8,5 +8,5 @@
       ]
     }
   ],
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [{ "source": "/((?!assets/|_expo/|favicon.ico|metadata.json).*)", "destination": "/index.html" }]
 }

@@ -65,6 +65,7 @@
     "android": "expo start --android --dev-client",
     "ios": "expo start --ios --dev-client",
     "web": "expo start --web",
+    "export:web": "expo export --platform web && node scripts/postexport-web.js",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "test": "jest",

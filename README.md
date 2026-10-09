@@ -33,14 +33,16 @@ Every AI feature runs on the phone and keeps working in airplane mode. Every mod
 
 ### The same models in a browser
 
+Live: **https://faith-ai-web.vercel.app** (deployed 2026-10-09 from commit `8c26ad8`).
+
 The web build runs the same Qwen2.5 and all-MiniLM-L6-v2 GGUF files through llama.cpp compiled to WebAssembly ([wllama](https://github.com/ngxson/wllama)), inside a Web Worker. Settings → On-device AI downloads them into the browser's private storage; Ask FAITH then uses the same router, retrieval, guard and semantic search as the phone. Voice and scanning stay in the Android app. Measured in Chromium on a 16-thread desktop with 8 WebAssembly threads: Qwen2.5 0.5B at about 42 tokens/s.
 
 ```bash
-npm run web                        # dev server, already cross-origin isolated (metro.config.js)
-npx expo export --platform web     # static site in dist/; serve with the headers in vercel.json
+npm run web          # dev server, already cross-origin isolated (metro.config.js)
+npm run export:web   # static site in dist/; deploy that folder (vercel deploy dist --prod)
 ```
 
-Multi-threaded WebAssembly needs `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: credentialless` on every response; without them wllama falls back to a single thread.
+`export:web` runs `expo export` and then `scripts/postexport-web.js`, which renames `assets/node_modules` to `assets/vendor`: Vercel never uploads a directory called `node_modules`, and that is where Expo puts the wllama and SQLite wasm files. Multi-threaded WebAssembly needs `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: credentialless` on every response (see `vercel.json`); without them wllama falls back to a single thread.
 
 **Why local beats cloud here:**
 - Health records, voice and photos of prescriptions never leave the phone.
