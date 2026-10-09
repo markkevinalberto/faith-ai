@@ -25,12 +25,13 @@ const RULES: Rule[] = [
   },
   {
     id: 'dose_change',
-    re: /\b(increase|decrease|reduce|raise|lower|double|halve|adjust|change|up|cut)\s+(your|the|this|that)?\s*(dose|dosage|insulin|medication|medicine)\b/i,
+    // Up to three words may sit in between, e.g. "increase your metformin dose".
+    re: /\b(increase|decrease|reduce|raise|lower|double|halve|adjust|change|up|cut)\s+(your|the|this|that)?\s*(?:[\w-]+\s+){0,3}?(dose|doses|dosage|insulin|medication|medications|medicine|medicines)\b/i,
     allowIfPrecededBy: NEGATION,
   },
   {
     id: 'stop_start_medicine',
-    re: /\b(stop|start|skip|discontinue|quit|pause)\s+((taking|using)\b|(your|the|this|that)?\s*(medication|medicine|insulin|pills?|tablets?|treatment|dose)\b)/i,
+    re: /\b(stop|start|skip|discontinue|quit|pause)\s+((taking|using)\b|(your|the|this|that)?\s*(?:[\w-]+\s+){0,2}?(medication|medicine|insulin|pills?|tablets?|treatment|dose)\b)/i,
     allowIfPrecededBy: NEGATION,
   },
   {
@@ -61,6 +62,11 @@ export interface GuardOptions {
    * the prediabetes range"; requiring the label keeps the answer tied to the computed fact.
    */
   requiredPhrases?: string[];
+  /**
+   * Words the output must not contain at all (whole words, case-insensitive). The tips note uses this
+   * for the person's own medicine names and dose words: tips are never about medicines.
+   */
+  forbiddenTerms?: string[];
 }
 
 /**
@@ -89,6 +95,10 @@ export function guardOutput(raw: string, context: string, options: GuardOptions 
   const lower = text.toLowerCase().replace(/\s+/g, ' ');
   for (const phrase of options.requiredPhrases ?? []) {
     if (!lower.includes(phrase.toLowerCase().replace(/\s+/g, ' '))) violations.push(`missing_phrase:${phrase.slice(0, 40)}`);
+  }
+  for (const term of options.forbiddenTerms ?? []) {
+    const t = term.trim().toLowerCase();
+    if (t && new RegExp(`(^|[^a-z0-9])${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-z0-9]|$)`).test(lower)) violations.push(`forbidden_term:${t.slice(0, 30)}`);
   }
   return { ok: violations.length === 0, violations, text };
 }

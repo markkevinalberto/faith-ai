@@ -12,13 +12,16 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { BIOMARKERS, biomarkersByCategory, describeBandRange, getBiomarker, placeValue, type Biomarker, type Placement } from '@/ai/knowledge/biomarkers';
 import { getSource } from '@/ai/knowledge/sources';
+import { CoachCard, type CoachSubject } from '@/components/CoachCard';
 import { addLabResult, createLabTest, listLabTests } from '@/db/repo/care';
 import { addReading } from '@/db/repo/vitals';
+import { evaluateReading, type EscalationResult } from '@/domain/escalation';
 import { localDateKey } from '@/domain/time';
 import { glucoseToMgdl, parseDecimal } from '@/domain/units';
 import { useApp, useProfile } from '@/state/AppState';
 import { useAction } from '@/state/hooks';
 import { Button } from '@/ui/Button';
+import { EscalationCard } from '@/ui/EscalationCard';
 import { Banner } from '@/ui/Feedback';
 import { DateTimeField, SegmentedControl, TextField } from '@/ui/Fields';
 import { Illustration } from '@/ui/Illustration';
@@ -51,7 +54,7 @@ export default function AddResult() {
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState<{ name: string; shown: string; placement: Placement | null; asReading: boolean } | null>(null);
+  const [saved, setSaved] = useState<{ name: string; shown: string; placement: Placement | null; asReading: boolean; coach: CoachSubject | null; escalation: EscalationResult | null } | null>(null);
 
   const effectiveUnit = biomarker ? (biomarker.units.includes(unit) ? unit : biomarker.units[0]) : unit.trim();
   const num = parseDecimal(value);
@@ -106,26 +109,34 @@ export default function AddResult() {
     const name = biomarker?.name ?? customName.trim();
     const resultDate = localDateKey(date, timeZone);
     const asReading = biomarker?.readingType === 'glucose';
+    let coach: CoachSubject | null = null;
+    let escalation: EscalationResult | null = null;
     const ok = await run(async () => {
       if (biomarker && asReading) {
         const u = effectiveUnit === 'mmol/L' ? 'mmol/L' : 'mg/dL';
         const measuredAt = new Date(date);
         if (localDateKey(measuredAt, timeZone) !== localDateKey(new Date(), timeZone)) measuredAt.setHours(8, 0, 0, 0);
-        await addReading(db, profile.id, {
-          type: 'glucose',
+        const input = {
+          type: 'glucose' as const,
           value: n,
           unit: u,
           valueCanonical: glucoseToMgdl(n, u),
-          context: biomarker.readingContext === 'fasting' ? 'fasting' : 'random',
+          context: biomarker.readingContext === 'fasting' ? ('fasting' as const) : ('random' as const),
           measuredAt: measuredAt.toISOString(),
           timezone: timeZone,
           notes: notes.trim(),
-          source: 'manual',
-        });
+          source: 'manual' as const,
+        };
+        const id = await addReading(db, profile.id, input);
+        escalation = evaluateReading({ type: 'glucose', valueCanonical: input.valueCanonical, systolic: null, diastolic: null }, profile.emergencyNumber);
+        coach = {
+          kind: 'reading',
+          reading: { ...input, id, profileId: profile.id, customTypeId: null, systolic: null, diastolic: null, pulse: null, utcOffsetMin: 0, notes: null, createdAt: '' },
+        };
         return;
       }
       const labId = params.labId ?? (await findOrCreateReport(resultDate));
-      await addLabResult(db, profile.id, labId, {
+      const resultId = await addLabResult(db, profile.id, labId, {
         analyte: name,
         valueNum: n,
         unit: effectiveUnit || null,
@@ -133,9 +144,10 @@ export default function AddResult() {
         resultDate,
         notes: notes.trim() || null,
       });
+      if (biomarker) coach = { kind: 'lab', biomarker, value: n, unit: effectiveUnit, resultId };
     });
     setSaving(false);
-    if (ok) setSaved({ name, shown: `${n}${effectiveUnit ? ` ${effectiveUnit}` : ''}`, placement, asReading });
+    if (ok) setSaved({ name, shown: `${n}${effectiveUnit ? ` ${effectiveUnit}` : ''}`, placement, asReading, coach, escalation });
   };
 
   if (saved) {
@@ -150,18 +162,22 @@ export default function AddResult() {
           </FormFooter>
         }>
         <Stack.Screen options={{ title: 'Result saved' }} />
-        <View style={{ alignItems: 'center' }}>
-          <Illustration name="mascot-encouragement" height={130} />
-        </View>
+        {!saved.coach ? (
+          <View style={{ alignItems: 'center' }}>
+            <Illustration name="mascot-encouragement" height={130} />
+          </View>
+        ) : null}
         <Banner
           tone="success"
           title={`${saved.name}: ${saved.shown} saved`}
           message={
             saved.placement
-              ? `${saved.placement.band.label} (${describeBandRange(saved.placement.band, saved.placement.canonicalUnit)}). General reference, not personalised.`
+              ? `${saved.placement.band.label.charAt(0).toUpperCase()}${saved.placement.band.label.slice(1)} (${describeBandRange(saved.placement.band, saved.placement.canonicalUnit)}). General reference, not personalised.`
               : 'Saved exactly as entered. Compare it with the range printed on your report.'
           }
         />
+        {saved.escalation ? <EscalationCard result={saved.escalation} emergencyNumber={profile.emergencyNumber} /> : null}
+        {saved.coach && !saved.escalation ? <CoachCard subject={saved.coach} /> : null}
         {saved.asReading ? (
           <AppText variant="caption" tone="subtle">
             Blood sugar results are kept with your glucose readings, so they appear on the Vitals chart too.

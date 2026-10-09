@@ -137,3 +137,17 @@ describe('offline knowledge library', () => {
     }
   });
 });
+
+describe('guard: medicine changes with a drug name in between', () => {
+  it('rejects "increase your metformin dose" but allows the negated form', () => {
+    expect(guardOutput('You could increase your metformin dose tonight.', 'context').violations).toContain('dose_change');
+    expect(guardOutput('Please stop your blood pressure tablets.', 'context').violations).toContain('stop_start_medicine');
+    expect(guardOutput("Don't change your metformin dose without asking your prescriber.", 'context').ok).toBe(true);
+    expect(guardOutput('Eating less salt helps lower blood pressure.', 'context').ok).toBe(true);
+  });
+
+  it('rejects forbidden terms as whole words only', () => {
+    expect(guardOutput('Take your Metformin with food.', 'context', { forbiddenTerms: ['metformin'] }).violations).toContain('forbidden_term:metformin');
+    expect(guardOutput('Doses aside, a short walk helps.', 'context', { forbiddenTerms: ['dose'] }).ok).toBe(true);
+  });
+});

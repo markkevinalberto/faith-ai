@@ -44,7 +44,6 @@ export default function RootLayout() {
             <Stack.Screen name="dose/[id]" options={{ presentation: 'modal', title: 'Dose' }} />
             <Stack.Screen name="care/lab/[id]" options={{ title: '' }} />
             <Stack.Screen name="care/lab/edit" options={{ presentation: 'modal', title: 'Lab test' }} />
-            <Stack.Screen name="care/lab/result" options={{ presentation: 'modal', title: 'Lab result' }} />
             <Stack.Screen name="care/appointment/[id]" options={{ title: '' }} />
             <Stack.Screen name="care/appointment/edit" options={{ presentation: 'modal', title: 'Appointment' }} />
             <Stack.Screen name="settings/index" options={{ title: 'Settings' }} />

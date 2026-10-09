@@ -2,7 +2,9 @@ import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Platform, View } from 'react-native';
 
+import { hasReadingNote } from '@/ai/coach';
 import { parseVoiceReading } from '@/ai/voice/voiceCommands';
+import { CoachCard } from '@/components/CoachCard';
 import { VoiceButton } from '@/components/VoiceButton';
 import { listTargets } from '@/db/repo/profiles';
 import { addReading, deleteReading, getReading, listCustomTypes, updateReading, type ReadingInput } from '@/db/repo/vitals';
@@ -64,7 +66,7 @@ function ReadingForm({ params, existing, customTypes }: { params: Params; existi
   const [measuredAt, setMeasuredAt] = useState(() => (existing ? new Date(existing.measuredAt) : new Date()));
   const [notes, setNotes] = useState(existing?.notes ?? '');
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
-  const [saved, setSaved] = useState<{ escalation: EscalationResult | null; pill: { label: string; tone: 'success' | 'warning' } | null } | null>(null);
+  const [saved, setSaved] = useState<{ escalation: EscalationResult | null; pill: { label: string; tone: 'success' | 'warning' } | null; reading: VitalReading } | null>(null);
   const [saving, setSaving] = useState(false);
   const [heard, setHeard] = useState<{ text: string; understood: boolean } | null>(null);
   const kindOptions = [
@@ -109,9 +111,10 @@ function ReadingForm({ params, existing, customTypes }: { params: Params; existi
     const input = build();
     if (!input) return;
     setSaving(true);
+    let savedId = params.id ?? '';
     const ok = await run(async () => {
       if (editing && params.id) await updateReading(db, profile.id, params.id, input);
-      else await addReading(db, profile.id, input);
+      else savedId = await addReading(db, profile.id, input);
     });
     setSaving(false);
     if (!ok) return;
@@ -120,31 +123,29 @@ function ReadingForm({ params, existing, customTypes }: { params: Params; existi
       profile.emergencyNumber,
     );
     const targets = await listTargets(db, profile.id);
-    const assessed = assessReading(
-      {
-        id: params.id ?? '',
-        profileId: profile.id,
-        type: input.type,
-        customTypeId: input.customTypeId ?? null,
-        value: input.value ?? null,
-        unit: input.unit,
-        valueCanonical: input.valueCanonical ?? null,
-        systolic: input.systolic ?? null,
-        diastolic: input.diastolic ?? null,
-        pulse: input.pulse ?? null,
-        measuredAt: input.measuredAt,
-        timezone: input.timezone,
-        utcOffsetMin: 0,
-        context: input.context ?? null,
-        source: 'manual',
-        notes: null,
-        createdAt: '',
-      },
-      targets,
-      profile.emergencyNumber,
-    );
+    const reading: VitalReading = {
+      id: savedId,
+      profileId: profile.id,
+      type: input.type,
+      customTypeId: input.customTypeId ?? null,
+      value: input.value ?? null,
+      unit: input.unit,
+      valueCanonical: input.valueCanonical ?? null,
+      systolic: input.systolic ?? null,
+      diastolic: input.diastolic ?? null,
+      pulse: input.pulse ?? null,
+      measuredAt: input.measuredAt,
+      timezone: input.timezone,
+      utcOffsetMin: 0,
+      context: input.context ?? null,
+      source: 'manual',
+      notes: null,
+      createdAt: '',
+    };
+    const assessed = assessReading(reading, targets, profile.emergencyNumber);
     const pill = positionPill(assessed.position, assessed.target) as { label: string; tone: 'success' | 'warning' } | null;
-    if (escalation || pill) setSaved({ escalation, pill });
+    // Glucose, blood pressure, pulse and oxygen readings get FAITH's note with tips.
+    if (escalation || pill || hasReadingNote(reading.type)) setSaved({ escalation, pill, reading });
     else router.back();
   };
 
@@ -163,16 +164,23 @@ function ReadingForm({ params, existing, customTypes }: { params: Params; existi
     ]);
 
   if (saved) {
+    // Tips are left out when a safety card is shown: the person should follow that first.
+    const coach = !saved.escalation && hasReadingNote(saved.reading.type);
     return (
       <Screen edges={[]} footer={<FormFooter><Button title="Done" icon="checkmark" size="lg" onPress={() => router.back()} /></FormFooter>}>
         <Stack.Screen options={{ title: 'Reading saved' }} />
-        {!saved.escalation ? (
+        {!saved.escalation && !coach ? (
           <View style={{ alignItems: 'center' }}>
             <Illustration name="mascot-encouragement" height={140} />
           </View>
         ) : null}
-        <Banner tone="success" title="Saved" message={saved.pill ? `${saved.pill.label}. A single reading can vary — look at your trend over time.` : 'Your reading has been recorded.'} />
+        <Banner
+          tone="success"
+          title="Saved"
+          message={coach ? 'Your reading is saved on this phone.' : saved.pill ? `${saved.pill.label}. A single reading can vary — look at your trend over time.` : 'Your reading has been recorded.'}
+        />
         {saved.escalation ? <EscalationCard result={saved.escalation} emergencyNumber={profile.emergencyNumber} /> : null}
+        {coach ? <CoachCard subject={{ kind: 'reading', reading: saved.reading }} /> : null}
       </Screen>
     );
   }
