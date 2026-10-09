@@ -7,7 +7,7 @@ import { PermissionsAndroid, Platform } from 'react-native';
 import { base64ToBytes, concatBytes, peakLevel } from './wav';
 
 interface LiveAudioStream {
-  init(options: { sampleRate: number; channels: number; bitsPerSample: number; audioSource?: number; bufferSize?: number; wavFile: string }): void;
+  init(options: { sampleRate: number; channels: number; bitsPerSample: number; audioSource?: number; bufferSize?: number; wavFile: string }): Promise<void> | void;
   start(): void;
   stop(): Promise<string>;
   on(event: 'data', callback: (base64: string) => void): { remove(): void } | undefined;
@@ -43,7 +43,8 @@ export async function startRecording(onLevel?: (level: number) => void): Promise
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const stream = (require('@fugood/react-native-audio-pcm-stream') as { default: LiveAudioStream }).default;
   const chunks: Uint8Array[] = [];
-  stream.init({ sampleRate: SAMPLE_RATE, channels: 1, bitsPerSample: 16, audioSource: 6, bufferSize: 4096, wavFile: '' });
+  // Android's init resolves once the AudioRecord is created; failures surface here, not silently.
+  await stream.init({ sampleRate: SAMPLE_RATE, channels: 1, bitsPerSample: 16, audioSource: 6, bufferSize: 4096, wavFile: '' });
   const sub = stream.on('data', (b64) => {
     const bytes = base64ToBytes(b64);
     chunks.push(bytes);
