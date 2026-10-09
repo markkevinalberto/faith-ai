@@ -1,56 +1,79 @@
-# Welcome to your Expo app 👋
+# FAITH AI
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**F**amily **A**ssistant for **I**llness, **T**reatment & **H**ealth. *Your health, in your hands. Even offline.*
 
-## Get started
+**A private, offline-first health companion for people living with diabetes, high blood pressure and other long-term conditions.** It runs on Android first, with iOS to follow, using React Native and Expo. The AI runs **on the phone** through llama.cpp.
 
-1. Install dependencies
+> FAITH is a health organiser and educational assistant, **not a medical device**. It doesn't diagnose, prescribe or change treatment. All clinical thresholds and reference content are drafts pending clinical review.
 
-   ```bash
-   npm install
-   ```
+## What it does
 
-2. Start the app
+| Area | Features |
+|---|---|
+| **Home** | Today's care plan, next dose with one-tap "I took it", refill alerts, latest readings tagged against targets (with the target's source), upcoming appointments and labs, assistant entry point |
+| **Vitals** | Glucose (mg/dL or mmol/L with meal context), blood pressure with pulse, pulse, weight, temperature, SpO₂, and custom measurements. Time-proportional charts (day, week, month, year), statistics, trend, clinician or reference target bands, history and editing |
+| **Medications** | Name, strength and form; instructions copied from the label; start and end dates; multiple times per day; repeat days; as-needed medicines; supply and refill reminders. Dose statuses: upcoming, taken, skipped, snoozed, **not confirmed**. A dose is never marked taken automatically |
+| **Care plan** | Appointments (preparation notes, questions, reminders, attachments) and lab tests (fasting flag, preparation, reminders, results recorded exactly as printed, report attachments) |
+| **Ask FAITH** | Offline assistant: safety router, then retrieval from your records, then deterministic calculations, then the curated library (with sources and review dates), then optional on-device generation, then an output guard. Records, references and generated text are shown as three distinct sections. Without a model it still answers deterministically |
+| **Reminders** | Local notifications with Taken, Snooze and Skip actions; DST and time-zone aware; reconciled against the database by deterministic IDs |
+| **Privacy** | SQLCipher-encrypted database, key in secure storage, optional biometric or PIN app lock, separate profiles per family member, JSON and CSV export, permanent deletion, no network by default |
+| **Demo mode** | A clearly labelled fictional person with 90 days of realistic data |
 
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Quick start
 
 ```bash
-npm run reset-project
+# Windows: skip llama.rn's native download locally (EAS fetches it on Linux)
+RNLLAMA_SKIP_POSTINSTALL=1 npm install
+
+npm test               # unit + integration tests (Jest)
+npm run typecheck      # TypeScript strict
+npm run lint           # ESLint (expo config)
+npx expo start --web   # UI preview in a browser (no native AI, no encryption)
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+**Android device build:** see [docs/ANDROID_BUILD_AND_DEVICE_TESTING.md](docs/ANDROID_BUILD_AND_DEVICE_TESTING.md).
 
-### Other setup steps
+```bash
+npx eas-cli@latest build -p android --profile preview
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Verification status (2026-10-09)
 
-## Learn more
+| Check | Result |
+|---|---|
+| Unit tests (`tests/unit`) | **145 passed**: units, time zones and DST, statistics and trends, schedule generation, dose state machine, reminder reconciliation, escalation, targets, validation, supply, chart scales, router, guard, conversions, library |
+| Integration tests (`tests/integration`, real SQLite through `node:sqlite`) | **50 passed**: migrations (with rollback), persistence, schedule-edit regeneration, time-zone re-timing, profile isolation (composite FKs), export, permanent deletion, reminder reconciliation with a fake notifier, demo seeding, offline assistant (network calls fail the test) |
+| `tsc --noEmit` (strict) | Clean |
+| `expo lint` | Clean |
+| `expo-doctor` | 21 of 21 checks passed |
+| Web UI walkthrough | Onboarding → sample data → Home → Vitals chart and target band → add reading → safety card → Ask (deterministic answer and dose-change refusal) → all settings screens render |
+| **Physical Android device** | **Not yet run.** SQLCipher, llama.rn inference, notifications and biometrics need an EAS build on the phone. Follow the checklist in the device-testing doc |
 
-To learn more about developing your project with Expo, look at the following resources:
+## Project structure
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```
+src/
+  app/          Expo Router screens: (tabs) home/vitals/medications/care/ask, details, forms, settings
+  domain/       Pure, tested medical and time logic (units, DST, stats, schedules, dose states, reminders, targets, escalation)
+  db/           SQL interface, versioned migrations, SQLCipher adapter, profile-scoped repositories, export and deletion
+  ai/           Router, retrieval, knowledge library and sources, prompt, guard, answer orchestrator, llama.rn engine, model manager
+  services/     Notifications, reminder sync, files, app lock, demo seed, device locale and time zone
+  state/        App providers (database, profile, app lock, reminder coordinator) and data hooks
+  ui/           Design tokens, components, time chart, escalation card
+tests/unit, tests/integration
+docs/           Implementation plan, Android build and device testing, privacy and safety, demo script
+```
 
-## Join the community
+## Documentation
+- [Implementation plan and architecture](docs/IMPLEMENTATION_PLAN.md)
+- [Android build, device checklist, model compatibility, notification limits](docs/ANDROID_BUILD_AND_DEVICE_TESTING.md)
+- [Privacy, data handling and medical safety](docs/PRIVACY_AND_SAFETY.md)
+- [Disclosures: models, libraries, tools](DISCLOSURES.md)
+- [Demo script](docs/DEMO_SCRIPT.md)
 
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Known limitations
+- **Some artwork is still a placeholder.** The five mascot poses are sharp transparent cut-outs from the character sheet. The other illustrations (3D icons, empty states, contextual mascot scenes) are 2× upscales cropped from the design board, so they look soft on high-density screens. Replace any of them with a full-resolution export of the same file name, and update its pixel size in `src/ui/Illustration.tsx`.
+- The clinical content (escalation thresholds, reference ranges, library) is **draft** and needs review by a licensed clinician before real-world use.
+- iOS hasn't been built yet. It needs EAS and an Apple developer account; the code avoids Android-only APIs except the date picker, which has an iOS path.
+- Model download speed and inference speed depend on the device. Speeds in the docs are estimates until measured with the in-app test.
+- Web preview only: charts use a window-size estimate before layout. No encryption, notifications or native AI on web.
