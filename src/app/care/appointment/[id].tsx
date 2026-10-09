@@ -1,5 +1,5 @@
 import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 
 import { AttachmentList } from '@/components/CareItems';
 import { deleteAppointment, getAppointment, setAppointmentStatus } from '@/db/repo/care';
@@ -8,6 +8,7 @@ import { deleteDocumentFile } from '@/services/files';
 import { useApp, useProfile } from '@/state/AppState';
 import { useAction, useQuery } from '@/state/hooks';
 import { Button, IconButton } from '@/ui/Button';
+import { showAlert } from '@/ui/dialog';
 import { EmptyState, InlineLoading, Pill } from '@/ui/Feedback';
 import { Card, Screen, Section } from '@/ui/Layout';
 import { AppText } from '@/ui/Text';
@@ -25,7 +26,7 @@ export default function AppointmentDetail() {
   const a = q.data;
   const setStatus = (s: 'scheduled' | 'completed' | 'cancelled') => run(async () => setAppointmentStatus(db, profile.id, a.id, s));
   const remove = () =>
-    Alert.alert('Delete appointment?', 'The appointment and its attachments will be permanently deleted from this phone.', [
+    showAlert('Delete appointment?', 'The appointment and its attachments will be permanently deleted from this phone.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',

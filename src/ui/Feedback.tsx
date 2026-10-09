@@ -35,8 +35,8 @@ export function Pill({ label, tone = 'neutral', icon }: { label: string; tone?: 
   const { fg, bg } = toneColors(c, tone);
   return (
     <View style={[styles.pill, { backgroundColor: bg }]}>
-      {icon ? <Ionicons name={icon} size={13} color={fg} /> : null}
-      <AppText variant="label" style={{ color: fg, fontSize: 12.5, lineHeight: 16 }} numberOfLines={1}>
+      {icon ? <Ionicons name={icon} size={15} color={fg} /> : null}
+      <AppText variant="label" style={{ color: fg, fontSize: 14, lineHeight: 19 }} numberOfLines={3}>
         {label}
       </AppText>
     </View>
@@ -124,7 +124,7 @@ export function ErrorView({ title, message, onRetry, children }: { title: string
 
 const styles = StyleSheet.create({
   banner: { flexDirection: 'row', gap: SPACE.md, padding: SPACE.md, borderRadius: RADIUS.md },
-  pill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: SPACE.sm, paddingVertical: 3, borderRadius: RADIUS.pill, alignSelf: 'flex-start' },
+  pill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: SPACE.sm + 2, paddingVertical: 4, borderRadius: RADIUS.pill, alignSelf: 'flex-start', maxWidth: '100%' },
   empty: { alignItems: 'center', gap: SPACE.sm, padding: SPACE.xxl, borderRadius: RADIUS.lg, borderWidth: StyleSheet.hairlineWidth, borderStyle: 'dashed' },
   emptyIcon: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', marginBottom: SPACE.xs },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },

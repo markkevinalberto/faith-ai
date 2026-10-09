@@ -24,6 +24,7 @@ import { Banner, EmptyState, InlineLoading, Pill } from '@/ui/Feedback';
 import { Illustration } from '@/ui/Illustration';
 import { Card, PageHeader, Screen, Section } from '@/ui/Layout';
 import { AppText } from '@/ui/Text';
+import { useTextSize } from '@/ui/textSize';
 import { RADIUS, SPACE, useTheme } from '@/ui/theme';
 import { VITAL_META, assessReading, positionPill, readingDisplay, type BuiltInVital } from '@/ui/vitals';
 
@@ -34,6 +35,8 @@ export default function Home() {
   const profile = useProfile();
   const { db, timeZone, locale, notifyChanged } = useApp();
   const { c } = useTheme();
+  // At Large/Extra large text the two-column reading tiles get too narrow; stack them instead.
+  const oneColumn = useTextSize().scale > 1;
   const now = useNow(30_000);
   const run = useAction();
   const today = localDateKey(now, timeZone);
@@ -111,13 +114,13 @@ export default function Home() {
                 {next.doseLabel ? ` · ${next.doseLabel}` : ''}
               </AppText>
               {next.doseInstructions ? (
-                <AppText variant="caption" tone="heroMuted" style={{ marginTop: SPACE.xs }} numberOfLines={2}>
+                <AppText variant="caption" tone="heroMuted" style={{ marginTop: SPACE.xs }}>
                   “{next.doseInstructions}”
                 </AppText>
               ) : null}
               <View style={styles.heroActions}>
                 {canTakeNow(next, now) ? <Button title="I took it" icon="checkmark" variant="secondary" onPress={() => void take(next.id)} style={{ flex: 1 }} /> : null}
-                <Button title="Details" icon="ellipsis-horizontal" variant="ghost" onPress={() => router.push({ pathname: '/dose/[id]', params: { id: next.id } })} style={{ flex: 1, borderColor: 'rgba(255,255,255,0.4)' }} />
+                <Button title="Details" icon="ellipsis-horizontal" variant="onHero" onPress={() => router.push({ pathname: '/dose/[id]', params: { id: next.id } })} style={{ flex: 1 }} />
               </View>
             </Card>
           ) : data.activeMeds > 0 ? (
@@ -146,8 +149,8 @@ export default function Home() {
               key={m.id}
               tone="info"
               icon="bag-handle-outline"
-              title={`${m.name}: about ${m.daysLeft} day${m.daysLeft === 1 ? '' : 's'} left`}
-              message="Based on your recorded count and doses marked taken. Contact your pharmacy about a refill."
+              title={m.daysLeft <= 0 ? `${m.name} may have run out` : `${m.name}: about ${m.daysLeft} day${m.daysLeft === 1 ? '' : 's'} left`}
+              message="Based on your recorded count and the doses marked taken. Ask your pharmacy about a refill, then update the count."
               action={<Button title="Update count" size="sm" variant="secondary" onPress={() => router.push({ pathname: '/medications/[id]', params: { id: m.id } })} />}
             />
           ))}
@@ -180,7 +183,7 @@ export default function Home() {
           </Section>
 
           {/* Latest readings */}
-          <Section title="Latest readings" action={{ label: 'Add reading', onPress: () => router.push('/vitals/new') }}>
+          <Section title="Latest readings" action={{ label: 'Add reading', icon: 'add', onPress: () => router.push('/vitals/new') }}>
             {data.latest.filter((r) => r.type !== 'custom').length === 0 ? (
               <EmptyState icon="pulse-outline" illustration="onboard-record-glucose" title="No readings yet" message="Log glucose, blood pressure, weight and more. Charts and summaries appear here." action={{ label: 'Add reading', onPress: () => router.push('/vitals/new') }} />
             ) : (
@@ -198,7 +201,7 @@ export default function Home() {
                       accessibilityRole="button"
                       accessibilityLabel={`${meta.label}: ${disp.value} ${disp.unit}, ${relativeFromNow(r.measuredAt, now)}${pill ? `, ${pill.label}` : ''}`}
                       onPress={() => router.push({ pathname: '/vitals/[type]', params: { type } })}
-                      style={({ pressed }) => [styles.tile, { backgroundColor: c.surface, borderColor: c.border, opacity: pressed ? 0.9 : 1 }]}>
+                      style={({ pressed }) => [styles.tile, oneColumn && { flexBasis: '100%' }, { backgroundColor: c.surface, borderColor: c.border, opacity: pressed ? 0.9 : 1 }]}>
                       <View style={styles.tileHead}>
                         <Ionicons name={meta.icon} size={18} color={c.primary} />
                         <AppText variant="label" tone="muted" numberOfLines={1} style={{ flex: 1 }}>
@@ -237,10 +240,10 @@ export default function Home() {
                       style={styles.upcoming}>
                       <DateBadge iso={item.at} timeZone={timeZone} locale={locale} />
                       <View style={{ flex: 1 }}>
-                        <AppText variant="bodyStrong" numberOfLines={1}>
+                        <AppText variant="bodyStrong" numberOfLines={3}>
                           {item.title}
                         </AppText>
-                        <AppText variant="caption" tone="muted" numberOfLines={1}>
+                        <AppText variant="caption" tone="muted">
                           {formatDateTime(item.at, timeZone, locale, { weekday: 'short', hour: 'numeric', minute: '2-digit' })}
                           {item.sub ? ` · ${item.sub}` : ''}
                         </AppText>

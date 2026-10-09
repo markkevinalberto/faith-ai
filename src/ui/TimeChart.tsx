@@ -32,7 +32,9 @@ export interface TimeChartProps {
   seriesLabels?: [string, string?];
 }
 
-const PAD = { l: 40, r: 12, t: 12, b: 26 };
+const PAD = { l: 44, r: 12, t: 12, b: 30 };
+/** Axis labels: 13 px keeps them legible for older readers without crowding a phone-width chart. */
+const AXIS_FONT = 13;
 
 export function TimeChart({ points, range, window, timeZone, locale, band, band2, formatY = (v) => String(Math.round(v)), accessibilitySummary, height = 210, seriesLabels }: TimeChartProps) {
   const { c } = useTheme();
@@ -85,7 +87,7 @@ export function TimeChart({ points, range, window, timeZone, locale, band, band2
           {model.yTicks.map((t) => (
             <G key={`y${t}`}>
               <Line x1={PAD.l} x2={width - PAD.r} y1={model.y(t)} y2={model.y(t)} stroke={c.chartGrid} strokeWidth={1} />
-              <SvgText x={PAD.l - 6} y={model.y(t) + 4} fontSize={11} fill={c.textSubtle} textAnchor="end">
+              <SvgText x={PAD.l - 6} y={model.y(t) + 4.5} fontSize={AXIS_FONT} fill={c.textSubtle} textAnchor="end">
                 {formatY(t)}
               </SvgText>
             </G>
@@ -93,7 +95,7 @@ export function TimeChart({ points, range, window, timeZone, locale, band, band2
           {model.xTicks.map((t) => (
             <G key={`x${t.t}`}>
               <Line x1={model.x(t.t)} x2={model.x(t.t)} y1={PAD.t} y2={height - PAD.b} stroke={c.chartGrid} strokeWidth={1} strokeDasharray="2,4" />
-              <SvgText x={model.x(t.t)} y={height - 8} fontSize={11} fill={c.textSubtle} textAnchor="middle">
+              <SvgText x={model.x(t.t)} y={height - 9} fontSize={AXIS_FONT} fill={c.textSubtle} textAnchor="middle">
                 {t.label}
               </SvgText>
             </G>
@@ -131,7 +133,7 @@ function Legend({ color, label }: { color: string; label: string }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
       <View style={{ width: 10, height: 3, borderRadius: 2, backgroundColor: color }} />
-      <AppText variant="caption" tone="subtle" style={{ fontSize: 11.5 }}>
+      <AppText variant="caption" tone="subtle" style={{ fontSize: 13, lineHeight: 18 }}>
         {label}
       </AppText>
     </View>

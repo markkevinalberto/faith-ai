@@ -99,8 +99,9 @@ describe('formatting helpers', () => {
 
   it('describes relative times', () => {
     const now = new Date('2026-10-09T12:00:00Z');
-    expect(relativeFromNow('2026-10-09T12:30:00Z', now)).toBe('in 30 min');
-    expect(relativeFromNow('2026-10-09T09:00:00Z', now)).toBe('3 h ago');
+    expect(relativeFromNow('2026-10-09T12:30:00Z', now)).toBe('in 30 minutes');
+    expect(relativeFromNow('2026-10-09T09:00:00Z', now)).toBe('3 hours ago');
+    expect(relativeFromNow('2026-10-09T13:00:00Z', now)).toBe('in 1 hour');
     expect(relativeFromNow('2026-10-11T12:00:00Z', now)).toBe('in 2 days');
   });
 });

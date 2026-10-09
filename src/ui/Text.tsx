@@ -1,6 +1,7 @@
 import { Text, type TextProps } from 'react-native';
 
-import { TYPE, useTheme, type Palette, type TypeVariant } from './theme';
+import { MAX_TOTAL_TEXT_SCALE, useTextSize } from './textSize';
+import { scaleTextOverride, useTheme, useType, type Palette, type TypeVariant } from './theme';
 
 export type TextTone = 'default' | 'muted' | 'subtle' | 'primary' | 'danger' | 'warning' | 'success' | 'info' | 'demo' | 'onPrimary' | 'hero' | 'heroMuted';
 
@@ -39,13 +40,20 @@ export interface AppTextProps extends TextProps {
   center?: boolean;
 }
 
+/**
+ * Text in the app's type scale, sized by the user's text-size choice. An explicit fontSize in `style`
+ * is scaled too, so every size grows together. The phone's own font scale still applies on top, up
+ * to a combined 1.8×.
+ */
 export function AppText({ variant = 'body', tone = 'default', center, style, ...rest }: AppTextProps) {
   const { c } = useTheme();
+  const type = useType();
+  const { scale } = useTextSize();
   return (
     <Text
-      maxFontSizeMultiplier={1.8}
+      maxFontSizeMultiplier={MAX_TOTAL_TEXT_SCALE / scale}
       {...rest}
-      style={[TYPE[variant], { color: toneColor(c, tone) }, center && { textAlign: 'center' }, style]}
+      style={[type[variant], { color: toneColor(c, tone) }, center && { textAlign: 'center' }, style, scaleTextOverride(style, scale)]}
     />
   );
 }

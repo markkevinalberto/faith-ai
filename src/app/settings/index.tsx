@@ -1,11 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Linking, Platform, Pressable, View } from 'react-native';
+import { Linking, Platform, Pressable, View } from 'react-native';
 
 import { useEngineState } from '@/ai/inference/engineStore';
 import { getModelSpec } from '@/ai/inference/modelCatalog';
 import { initials } from '@/components/AppChrome';
+import { TextSizePicker } from '@/components/TextSizePicker';
 import { deleteProfileData } from '@/db/dataManagement';
 import { SETTINGS, setSetting, updateProfile } from '@/db/repo/profiles';
 import { seedDemoProfile } from '@/services/demoSeed';
@@ -15,6 +16,7 @@ import { useApp, useProfile } from '@/state/AppState';
 import { useAppLock } from '@/state/AppLock';
 import { friendlyError, useAction, useQuery } from '@/state/hooks';
 import { Button } from '@/ui/Button';
+import { showAlert } from '@/ui/dialog';
 import { Banner, Pill } from '@/ui/Feedback';
 import { ToggleRow } from '@/ui/Fields';
 import { Card, Divider, ListRow, Screen, Section } from '@/ui/Layout';
@@ -46,7 +48,7 @@ export default function Settings() {
       await refreshProfiles();
       router.replace('/home');
     } catch (e) {
-      Alert.alert("Couldn't create sample data", friendlyError(e));
+      showAlert("Couldn't create sample data", friendlyError(e));
     } finally {
       setBusy(false);
     }
@@ -54,7 +56,7 @@ export default function Settings() {
 
   const removeDemo = () => {
     if (!demo) return;
-    Alert.alert('Remove sample profile?', 'All fictional sample data will be deleted.', [
+    showAlert('Remove sample profile?', 'All fictional sample data will be deleted.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Remove',
@@ -72,7 +74,7 @@ export default function Settings() {
 
   const toggleLock = async (v: boolean) => {
     const r = await lock.setEnabled(v);
-    if (!r.ok && r.reason) Alert.alert('App lock', r.reason);
+    if (!r.ok && r.reason) showAlert('App lock', r.reason);
   };
 
   const askPermission = async () => {
@@ -102,6 +104,12 @@ export default function Settings() {
           <Ionicons name="chevron-forward" size={18} color={c.textSubtle} />
         </View>
       </Card>
+
+      <Section title="Display">
+        <Card>
+          <TextSizePicker />
+        </Card>
+      </Section>
 
       <Section title="Profiles" hint="Each family member has separate records. Data is never mixed between profiles.">
         <Card padded={false} style={{ paddingHorizontal: SPACE.lg, paddingVertical: SPACE.xs }}>

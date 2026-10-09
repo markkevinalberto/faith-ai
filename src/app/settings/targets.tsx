@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 
 import { deleteTarget, listTargets, upsertTarget } from '@/db/repo/profiles';
 import { REFERENCE_TARGETS, formatTargetRange, resolveTarget } from '@/domain/targets';
@@ -9,6 +9,7 @@ import { validateTarget } from '@/domain/validation';
 import { useApp, useProfile } from '@/state/AppState';
 import { useAction, useQuery } from '@/state/hooks';
 import { Button } from '@/ui/Button';
+import { showAlert } from '@/ui/dialog';
 import { Banner, Pill } from '@/ui/Feedback';
 import { TextField } from '@/ui/Fields';
 import { Card, Screen } from '@/ui/Layout';
@@ -116,7 +117,7 @@ export default function Targets() {
                     size="sm"
                     variant="ghost"
                     onPress={() =>
-                      Alert.alert('Remove your clinician target?', label, [
+                      showAlert('Remove your clinician target?', label, [
                         { text: 'Cancel', style: 'cancel' },
                         { text: 'Remove', style: 'destructive', onPress: () => void run(() => deleteTarget(db, profile.id, metric)) },
                       ])

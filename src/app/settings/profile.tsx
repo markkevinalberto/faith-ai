@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 
 import { addCondition, deleteCondition, listConditions, updateProfile } from '@/db/repo/profiles';
 import type { GlucoseUnit, TemperatureUnit, WeightUnit } from '@/domain/types';
@@ -8,6 +8,7 @@ import { validateProfileName } from '@/domain/validation';
 import { useApp, useProfile } from '@/state/AppState';
 import { useAction, useQuery } from '@/state/hooks';
 import { Button, IconButton } from '@/ui/Button';
+import { showAlert } from '@/ui/dialog';
 import { ChipSelect, SegmentedControl, TextField } from '@/ui/Fields';
 import { Card, Divider, FormFooter, Screen, Section } from '@/ui/Layout';
 import { CONDITION_OPTIONS } from '@/ui/options';
@@ -64,7 +65,7 @@ export default function ProfileSettings() {
                     icon="close"
                     label={`Remove ${cnd.name}`}
                     onPress={() =>
-                      Alert.alert('Remove condition?', cnd.name, [
+                      showAlert('Remove condition?', cnd.name, [
                         { text: 'Cancel', style: 'cancel' },
                         { text: 'Remove', style: 'destructive', onPress: () => void run(() => deleteCondition(db, profile.id, cnd.id)) },
                       ])

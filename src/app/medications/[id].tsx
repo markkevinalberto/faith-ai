@@ -1,6 +1,6 @@
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 
 import { DoseItem } from '@/components/DoseItem';
 import { countTakenSince, listMedicationHistory, logUnscheduledDose, syncDoseEvents } from '@/db/repo/doseEvents';
@@ -14,6 +14,7 @@ import { parseDecimal } from '@/domain/units';
 import { useApp, useProfile } from '@/state/AppState';
 import { useAction, useNow, useQuery } from '@/state/hooks';
 import { Button, IconButton } from '@/ui/Button';
+import { showAlert } from '@/ui/dialog';
 import { Banner, EmptyState, InlineLoading, Pill } from '@/ui/Feedback';
 import { TextField } from '@/ui/Fields';
 import { Card, Divider, Screen, Section, Stat } from '@/ui/Layout';
@@ -59,7 +60,7 @@ export default function MedicationDetail() {
     });
 
   const confirmDelete = () =>
-    Alert.alert('Delete medication?', `${m.name} and its dose history will be permanently deleted. To keep the history, mark it as stopped instead.`, [
+    showAlert('Delete medication?', `${m.name} and its dose history will be permanently deleted. To keep the history, mark it as stopped instead.`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -73,7 +74,7 @@ export default function MedicationDetail() {
     ]);
 
   const logPrn = () =>
-    Alert.alert('Record a dose now?', `This records that you took ${m.name}${m.strength ? ` ${m.strength}` : ''} just now. It does not check whether a dose is appropriate — follow your instructions.`, [
+    showAlert('Record a dose now?', `This records that you took ${m.name}${m.strength ? ` ${m.strength}` : ''} just now. It does not check whether a dose is appropriate — follow your instructions.`, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Record', onPress: () => void run(async () => void (await logUnscheduledDose(db, profile.id, m.id, new Date().toISOString(), timeZone))) },
     ]);

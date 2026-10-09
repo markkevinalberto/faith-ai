@@ -4,7 +4,7 @@
  */
 import * as SplashScreen from 'expo-splash-screen';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Alert, AppState as RNAppState } from 'react-native';
+import { AppState as RNAppState } from 'react-native';
 
 import { engineStore } from '../ai/inference/engineStore';
 import { localModels } from '../ai/inference/localModels';
@@ -17,7 +17,12 @@ import { currentLocale, currentTimeZone } from '../services/device';
 import { clearExportCache, deleteAllDocuments } from '../services/files';
 import { cancelAllNotifications } from '../services/notifications';
 import { Button } from '../ui/Button';
+import { showAlert } from '../ui/dialog';
 import { ErrorView, LoadingView } from '../ui/Feedback';
+import { parseTextSize, setTextSize } from '../ui/textSize';
+
+/** Browser storage errors raised when another tab already holds the database file. */
+const OPEN_ELSEWHERE = /NoModificationAllowedError|Access Handles cannot be created|another open Access Handle|database is locked/i;
 
 type Boot =
   | { kind: 'loading' }
@@ -55,6 +60,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const locale = useMemo(() => currentLocale(), []);
 
   const loadProfiles = useCallback(async (db: SqlDatabase) => {
+    setTextSize(parseTextSize(await getSetting(db, SETTINGS.textSize)));
     const list = await listProfiles(db);
     const saved = await getSetting(db, SETTINGS.activeProfileId);
     const chosen = list.find((p) => p.id === saved) ?? list.find((p) => !p.isDemo) ?? list[0] ?? null;
@@ -112,13 +118,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   if (boot.kind === 'loading') return <LoadingView label="Opening your encrypted records…" />;
   if (boot.kind === 'error') {
+    // In a browser the database file can only be open in one tab; say so instead of the raw error.
+    const inAnotherTab = !boot.keyError && OPEN_ELSEWHERE.test(boot.message);
     return (
       <ErrorView
-        title="Couldn't open your records"
+        title={inAnotherTab ? 'FAITH is open in another tab' : "Couldn't open your records"}
         message={
-          boot.keyError
-            ? `${boot.message} Your data stays encrypted on this phone. If you reinstalled the app or restored a backup, the original key may be gone and the data cannot be recovered.`
-            : boot.message
+          inAnotherTab
+            ? 'Your records can only be open in one browser tab or window at a time. Close the other FAITH tab, then tap Try again.'
+            : boot.keyError
+              ? `${boot.message} Your data stays encrypted on this phone. If you reinstalled the app or restored a backup, the original key may be gone and the data cannot be recovered.`
+              : boot.message
         }
         onRetry={() => void open()}>
         {boot.keyError ? (
@@ -127,7 +137,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             variant="danger"
             icon="trash"
             onPress={() =>
-              Alert.alert('Erase all local data?', 'This permanently deletes the encrypted database on this phone. This cannot be undone.', [
+              showAlert('Erase all local data?', 'This permanently deletes the encrypted database on this phone. This cannot be undone.', [
                 { text: 'Cancel', style: 'cancel' },
                 {
                   text: 'Erase',

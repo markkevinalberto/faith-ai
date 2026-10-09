@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { takeLabelDraft } from '@/ai/scan/draftStore';
 import { syncDoseEvents } from '@/db/repo/doseEvents';
@@ -13,6 +13,7 @@ import { getNotificationPermission, requestNotificationPermission } from '@/serv
 import { useApp, useProfile } from '@/state/AppState';
 import { useAction, useQuery } from '@/state/hooks';
 import { Button, IconButton } from '@/ui/Button';
+import { showAlert } from '@/ui/dialog';
 import { Banner, InlineLoading } from '@/ui/Feedback';
 import { ChipSelect, DateTimeField, TextField, ToggleRow } from '@/ui/Fields';
 import { Card, FormFooter, Screen, Section } from '@/ui/Layout';
@@ -152,7 +153,7 @@ function MedicationForm({ id, loaded }: { id?: string; loaded: MedicationWithSch
     setSaving(false);
     if (!ok) return;
     if (firstMed && !asNeeded && !profile.isDemo && Platform.OS !== 'web' && (await getNotificationPermission()) === 'undetermined') {
-      Alert.alert('Turn on dose reminders?', 'FAITH can remind you at each scheduled time. Reminders are created on this phone only.', [
+      showAlert('Turn on dose reminders?', 'FAITH can remind you at each scheduled time. Reminders are created on this phone only.', [
         { text: 'Not now', style: 'cancel', onPress: () => router.back() },
         { text: 'Allow', onPress: () => void requestNotificationPermission().finally(() => router.back()) },
       ]);

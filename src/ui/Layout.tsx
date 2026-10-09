@@ -16,7 +16,7 @@ import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 import { HeroGradient } from './Brand';
 import type { IconName } from './Button';
 import { AppText } from './Text';
-import { MIN_TOUCH, RADIUS, SPACE, cardShadow, toneColors, useTheme, type Tone } from './theme';
+import { RADIUS, SPACE, cardShadow, toneColors, useTheme, type Tone } from './theme';
 
 export interface ScreenProps {
   children: ReactNode;
@@ -135,7 +135,18 @@ export function Card({ children, style, onPress, accessibilityLabel, accessibili
   );
 }
 
-export function Section({ title, action, children, hint }: { title: string; action?: { label: string; onPress: () => void }; children: ReactNode; hint?: string }) {
+export function Section({
+  title,
+  action,
+  children,
+  hint,
+}: {
+  title: string;
+  action?: { label: string; onPress: () => void; icon?: IconName };
+  children: ReactNode;
+  hint?: string;
+}) {
+  const { c } = useTheme();
   return (
     <View style={styles.section}>
       <View style={styles.sectionHead}>
@@ -143,7 +154,13 @@ export function Section({ title, action, children, hint }: { title: string; acti
           {title}
         </AppText>
         {action ? (
-          <Pressable accessibilityRole="button" onPress={action.onPress} hitSlop={12} style={styles.sectionAction}>
+          // Shaped like a button, not bare coloured text, so it is recognisable as something to tap.
+          <Pressable
+            accessibilityRole="button"
+            onPress={action.onPress}
+            hitSlop={4}
+            style={({ pressed }) => [styles.sectionAction, { backgroundColor: pressed ? c.surfaceSunken : c.primarySoft }]}>
+            {action.icon ? <Ionicons name={action.icon} size={18} color={c.primary} /> : null}
             <AppText variant="label" tone="primary">
               {action.label}
             </AppText>
@@ -183,16 +200,16 @@ export function ListRow({ icon, iconTone = 'primary', title, subtitle, meta, rig
         </View>
       ) : null}
       <View style={styles.fill}>
-        <AppText variant="bodyStrong" numberOfLines={2}>
+        <AppText variant="bodyStrong" numberOfLines={3}>
           {title}
         </AppText>
         {subtitle ? (
-          <AppText variant="caption" tone="muted" numberOfLines={3}>
+          <AppText variant="caption" tone="muted">
             {subtitle}
           </AppText>
         ) : null}
         {meta ? (
-          <AppText variant="caption" tone="subtle" numberOfLines={2}>
+          <AppText variant="caption" tone="subtle">
             {meta}
           </AppText>
         ) : null}
@@ -237,7 +254,7 @@ export function Stat({ label, value, unit, caption, tone = 'default' }: { label:
         ) : null}
       </View>
       {caption ? (
-        <AppText variant="caption" tone={hero ? 'heroMuted' : 'subtle'} numberOfLines={2}>
+        <AppText variant="caption" tone={hero ? 'heroMuted' : 'subtle'} numberOfLines={3}>
           {caption}
         </AppText>
       ) : null}
@@ -253,8 +270,8 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'flex-end', paddingTop: SPACE.md, paddingBottom: SPACE.xs },
   card: { borderRadius: RADIUS.lg, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
   section: { gap: SPACE.sm, marginTop: SPACE.xs },
-  sectionHead: { flexDirection: 'row', alignItems: 'center', minHeight: 32 },
-  sectionAction: { minHeight: MIN_TOUCH, justifyContent: 'center', paddingLeft: SPACE.md },
+  sectionHead: { flexDirection: 'row', alignItems: 'center', minHeight: 32, gap: SPACE.sm },
+  sectionAction: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: SPACE.md, borderRadius: RADIUS.pill },
   row: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, minHeight: 56, paddingVertical: SPACE.sm },
   rowIcon: { width: 40, height: 40, borderRadius: RADIUS.md, alignItems: 'center', justifyContent: 'center' },
 });

@@ -6,11 +6,12 @@
 import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Alert, AppState as RNAppState, Platform } from 'react-native';
+import { AppState as RNAppState, Platform } from 'react-native';
 
 import { applyDoseAction, syncDoseEvents } from '../db/repo/doseEvents';
 import { DOSE_ACTIONS, configureNotifications, expoNotifier } from '../services/notifications';
 import { syncReminders } from '../services/reminderSync';
+import { showAlert } from '../ui/dialog';
 import { useApp } from './AppState';
 import { useAppLock } from './AppLock';
 import { friendlyError } from './hooks';
@@ -78,7 +79,7 @@ export function ReminderCoordinator() {
           else if (data.kind === 'refill' && data.entityId) router.push({ pathname: '/medications/[id]', params: { id: data.entityId } });
         }
       } catch (e) {
-        Alert.alert("Couldn't record that", friendlyError(e));
+        showAlert("Couldn't record that", friendlyError(e));
       }
       await Notifications.dismissNotificationAsync(response.notification.request.identifier).catch(() => undefined);
     }

@@ -1,9 +1,9 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type DependencyList } from 'react';
-import { Alert } from 'react-native';
 
 import { DoseActionError } from '../db/repo/doseEvents';
 import { NotFoundError, type SqlDatabase } from '../db/sql';
+import { showAlert } from '../ui/dialog';
 import { useApp } from './AppState';
 
 export interface QueryState<T> {
@@ -72,7 +72,7 @@ export function useAction() {
       notifyChanged();
       return true;
     } catch (e) {
-      Alert.alert(opts.errorTitle ?? "Couldn't save", friendlyError(e));
+      showAlert(opts.errorTitle ?? "Couldn't save", friendlyError(e));
       return false;
     }
   };

@@ -6,8 +6,10 @@ import { AppLockProvider } from '@/state/AppLock';
 import { AppStateProvider } from '@/state/AppState';
 import { ReminderCoordinator } from '@/state/ReminderCoordinator';
 import { useTheme } from '@/ui/theme';
+import { installWebStyles } from '@/ui/webStyles';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
+installWebStyles();
 
 export default function RootLayout() {
   const { c, dark } = useTheme();

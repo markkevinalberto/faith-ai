@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Switch, TextInput, View, type KeyboardTypeOptions } from 'react-native';
 
 import { AppText } from './Text';
-import { MIN_TOUCH, RADIUS, SPACE, TYPE, useTheme } from './theme';
+import { MAX_TOTAL_TEXT_SCALE, useTextSize } from './textSize';
+import { MIN_TOUCH, RADIUS, SPACE, useTheme, useType } from './theme';
 
 export interface TextFieldProps {
   label: string;
@@ -24,12 +25,14 @@ export interface TextFieldProps {
 
 export function TextField({ label, value, onChangeText, placeholder, helper, error, keyboardType, multiline, autoCapitalize, suffix, maxLength, testID, autoFocus }: TextFieldProps) {
   const { c } = useTheme();
+  const type = useType();
+  const { scale } = useTextSize();
   const [focused, setFocused] = useState(false);
   const borderColor = error ? c.danger : focused ? c.primary : c.borderStrong;
   return (
     <View style={{ gap: SPACE.xs }}>
       <AppText variant="label">{label}</AppText>
-      <View style={[styles.inputWrap, { borderColor, backgroundColor: c.surface, minHeight: multiline ? 104 : 52 }, focused && { borderWidth: 2 }]}>
+      <View style={[styles.inputWrap, { borderColor, backgroundColor: c.surface, minHeight: multiline ? 104 : 54 }, focused && { borderWidth: 2 }]}>
         <TextInput
           testID={testID}
           accessibilityLabel={label}
@@ -45,8 +48,8 @@ export function TextField({ label, value, onChangeText, placeholder, helper, err
           autoFocus={autoFocus}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          maxFontSizeMultiplier={1.8}
-          style={[TYPE.body, styles.input, { color: c.text, textAlignVertical: multiline ? 'top' : 'center' }]}
+          maxFontSizeMultiplier={MAX_TOTAL_TEXT_SCALE / scale}
+          style={[type.body, styles.input, { color: c.text, textAlignVertical: multiline ? 'top' : 'center' }]}
         />
         {suffix ? (
           <AppText variant="label" tone="muted" style={{ marginLeft: SPACE.sm }}>
@@ -87,8 +90,8 @@ export function SegmentedControl<T extends string | number>({ options, value, on
               accessibilityState={{ selected }}
               accessibilityLabel={o.label}
               onPress={() => onChange(o.value)}
-              style={[styles.segmentItem, selected && { backgroundColor: c.surface, borderColor: c.border }]}>
-              <AppText variant="label" tone={selected ? 'primary' : 'muted'} numberOfLines={1}>
+              style={[styles.segmentItem, selected && { backgroundColor: c.surface, borderColor: c.primary }]}>
+              <AppText variant="label" tone={selected ? 'primary' : 'muted'} numberOfLines={2} center>
                 {o.label}
               </AppText>
             </Pressable>
@@ -266,7 +269,7 @@ export function DateTimeField({
         accessibilityLabel={`${label}: ${display}`}
         accessibilityHint="Opens a picker"
         onPress={openAndroid}
-        style={[styles.inputWrap, { borderColor: c.borderStrong, backgroundColor: c.surface, minHeight: 52 }]}>
+        style={[styles.inputWrap, { borderColor: c.borderStrong, backgroundColor: c.surface, minHeight: 54 }]}>
         <Ionicons name={mode === 'time' ? 'time-outline' : 'calendar-outline'} size={20} color={c.primary} />
         <AppText variant="body" style={{ marginLeft: SPACE.sm, flex: 1 }}>
           {display}
@@ -286,8 +289,8 @@ const styles = StyleSheet.create({
   inputWrap: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: RADIUS.md, paddingHorizontal: SPACE.md },
   input: { flex: 1, paddingVertical: SPACE.md, minHeight: 48 },
   segment: { flexDirection: 'row', borderRadius: RADIUS.md, padding: 4, gap: 4 },
-  segmentItem: { flex: 1, minHeight: 44, borderRadius: RADIUS.sm, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'transparent', paddingHorizontal: SPACE.xs },
+  segmentItem: { flex: 1, minHeight: MIN_TOUCH, borderRadius: RADIUS.sm, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'transparent', paddingHorizontal: SPACE.xs },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 44, paddingHorizontal: SPACE.md, borderRadius: RADIUS.pill, borderWidth: 1 },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: MIN_TOUCH, paddingHorizontal: SPACE.md, borderRadius: RADIUS.pill, borderWidth: 1 },
   toggle: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, minHeight: MIN_TOUCH + 8, paddingVertical: SPACE.xs },
 });

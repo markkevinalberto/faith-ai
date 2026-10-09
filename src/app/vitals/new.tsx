@@ -1,6 +1,6 @@
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Platform, View } from 'react-native';
+import { Platform, View } from 'react-native';
 
 import { parseVoiceReading } from '@/ai/voice/voiceCommands';
 import { VoiceButton } from '@/components/VoiceButton';
@@ -13,6 +13,7 @@ import { validateBloodPressure, validateGlucose, validateSimpleVital } from '@/d
 import { useApp, useProfile } from '@/state/AppState';
 import { useAction, useQuery } from '@/state/hooks';
 import { Button } from '@/ui/Button';
+import { showAlert } from '@/ui/dialog';
 import { EscalationCard } from '@/ui/EscalationCard';
 import { Banner, InlineLoading } from '@/ui/Feedback';
 import { Illustration } from '@/ui/Illustration';
@@ -148,7 +149,7 @@ function ReadingForm({ params, existing, customTypes }: { params: Params; existi
   };
 
   const remove = () =>
-    Alert.alert('Delete this reading?', 'It will be permanently removed from this phone.', [
+    showAlert('Delete this reading?', 'It will be permanently removed from this phone.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',

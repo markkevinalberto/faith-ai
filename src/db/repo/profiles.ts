@@ -179,6 +179,8 @@ export const SETTINGS = {
   activeModelId: 'active_model_id',
   lastTimeZone: 'last_time_zone',
   notificationsAsked: 'notifications_asked',
+  /** Device-wide text size: 'standard' | 'large' | 'xlarge'. */
+  textSize: 'text_size',
 } as const;
 
 export async function getSetting(db: SqlExecutor, key: string): Promise<string | null> {

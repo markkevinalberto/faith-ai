@@ -19,7 +19,7 @@ import { IconButton } from '@/ui/Button';
 import { InlineLoading } from '@/ui/Feedback';
 import { Illustration } from '@/ui/Illustration';
 import { AppText } from '@/ui/Text';
-import { RADIUS, SPACE, TYPE, useTheme } from '@/ui/theme';
+import { RADIUS, SPACE, useTheme, useType } from '@/ui/theme';
 
 interface Turn {
   id: string;
@@ -33,6 +33,7 @@ export default function Ask() {
   const profile = useProfile();
   const { db, timeZone } = useApp();
   const { c } = useTheme();
+  const type = useType();
   const params = useLocalSearchParams<{ q?: string }>();
   const engine = useEngineState();
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -176,7 +177,7 @@ export default function Ask() {
               placeholder={voice === 'listening' ? 'Listening… tap ■ when you finish' : voice === 'transcribing' ? 'Transcribing on this phone…' : Platform.OS === 'web' ? 'Ask about your health records…' : 'Ask or tap the mic…'}
               placeholderTextColor={c.textSubtle}
               accessibilityLabel="Your question"
-              style={[TYPE.body, { color: c.text, flex: 1, minHeight: 48, maxHeight: 120 }]}
+              style={[type.body, { color: c.text, flex: 1, minHeight: 48, maxHeight: 160 }]}
               multiline
               maxLength={500}
               onSubmitEditing={() => void ask(input)}
@@ -184,7 +185,7 @@ export default function Ask() {
               returnKeyType="send"
               maxFontSizeMultiplier={1.6}
             />
-            <VoiceButton label="Ask by voice" size={40} showStatus={false} onPhaseChange={setVoice} onTranscript={(text) => void ask(text)} />
+            <VoiceButton label="Ask by voice" size={48} showStatus={false} onPhaseChange={setVoice} onTranscript={(text) => void ask(text)} />
             <IconButton icon="arrow-up-circle" label="Send question" tone="primary" size={30} onPress={() => void ask(input)} disabled={busy || !input.trim()} />
           </View>
           <AppText variant="caption" tone="subtle" center>

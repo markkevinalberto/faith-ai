@@ -5,12 +5,13 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { localModels } from '@/ai/inference/localModels';
 import { MAX_RECORDING_SECONDS, startRecording, type Recording } from '@/ai/voice/recorder';
 import { durationSeconds } from '@/ai/voice/wav';
 import { friendlyError } from '@/state/hooks';
+import { showAlert } from '@/ui/dialog';
 import { AppText } from '@/ui/Text';
 import { RADIUS, SPACE, useTheme } from '@/ui/theme';
 
@@ -68,7 +69,7 @@ export function VoiceButton({
       if (!text) throw new Error("FAITH didn't catch any words. Try again a little closer to the phone.");
       onTranscript(text);
     } catch (e) {
-      Alert.alert('Voice input', friendlyError(e));
+      showAlert('Voice input', friendlyError(e));
     } finally {
       setPhase('idle');
       setLevel(0);
@@ -77,7 +78,7 @@ export function VoiceButton({
 
   const start = async () => {
     if (!(await localModels.hasModel('speech'))) {
-      Alert.alert('Voice needs the on-device Whisper model', 'Download it once in Settings → On-device AI (about 78–148 MB). After that, voice works with no internet.', [
+      showAlert('Voice needs the on-device Whisper model', 'Download it once in Settings → On-device AI (about 78–148 MB). After that, voice works with no internet.', [
         { text: 'Not now', style: 'cancel' },
         { text: 'Open settings', onPress: () => router.push('/settings/model') },
       ]);
@@ -95,7 +96,7 @@ export function VoiceButton({
       }, 250);
     } catch (e) {
       recording.current = null;
-      Alert.alert('Voice input', friendlyError(e));
+      showAlert('Voice input', friendlyError(e));
     }
   };
 

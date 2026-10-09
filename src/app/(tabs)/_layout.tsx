@@ -10,7 +10,7 @@ import { useTheme } from '@/ui/theme';
 const TABS: { name: string; title: string; icon: IconName; iconActive: IconName }[] = [
   { name: 'home', title: 'Home', icon: 'home-outline', iconActive: 'home' },
   { name: 'vitals', title: 'Vitals', icon: 'pulse-outline', iconActive: 'pulse' },
-  { name: 'medications', title: 'Medications', icon: 'medkit-outline', iconActive: 'medkit' },
+  { name: 'medications', title: 'Medicines', icon: 'medkit-outline', iconActive: 'medkit' },
   { name: 'care', title: 'Care plan', icon: 'calendar-outline', iconActive: 'calendar' },
   { name: 'ask', title: 'Ask FAITH', icon: 'sparkles-outline', iconActive: 'sparkles' },
 ];
@@ -26,8 +26,10 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: c.primary,
         tabBarInactiveTintColor: c.textSubtle,
-        tabBarStyle: { backgroundColor: c.surface, borderTopColor: c.border, height: 64 + insets.bottom, paddingTop: 6, paddingBottom: Math.max(insets.bottom, 8) },
-        tabBarLabelStyle: { fontSize: 11.5, fontWeight: '600' },
+        tabBarStyle: { backgroundColor: c.surface, borderTopColor: c.border, height: 68 + insets.bottom, paddingTop: 6, paddingBottom: Math.max(insets.bottom, 8) },
+        // Fixed size (not scaled with the text-size setting) so five labels still fit a 360 px phone.
+        tabBarLabelStyle: { fontSize: 13, fontWeight: '600' },
+        tabBarAllowFontScaling: false,
         sceneStyle: { backgroundColor: c.bg },
       }}>
       {TABS.map((t) => (

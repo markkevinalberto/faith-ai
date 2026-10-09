@@ -276,9 +276,10 @@ export function relativeFromNow(iso: IsoInstant, now: Date): string {
   const suffix = minutes >= 0 ? '' : ' ago';
   const prefix = minutes >= 0 ? 'in ' : '';
   if (abs < 1) return 'now';
-  if (abs < 60) return `${prefix}${abs} min${suffix}`;
+  // Spelled out ("3 hours ago", not "3 h ago"): abbreviations are harder for older readers.
+  if (abs < 60) return `${prefix}${abs} minute${abs === 1 ? '' : 's'}${suffix}`;
   const hours = Math.round(abs / 60);
-  if (hours < 24) return `${prefix}${hours} h${suffix}`;
+  if (hours < 24) return `${prefix}${hours} hour${hours === 1 ? '' : 's'}${suffix}`;
   const days = Math.round(hours / 24);
   return `${prefix}${days} day${days === 1 ? '' : 's'}${suffix}`;
 }

@@ -68,11 +68,11 @@ export default function Medications() {
               {m.name}
               {m.strength ? <AppText variant="body" tone="muted">{`  ${m.strength}`}</AppText> : null}
             </AppText>
-            <AppText variant="caption" tone="muted" numberOfLines={2}>
+            <AppText variant="caption" tone="muted" numberOfLines={4}>
               {schedule}
             </AppText>
             {m.doseInstructions ? (
-              <AppText variant="caption" tone="subtle" numberOfLines={2}>
+              <AppText variant="caption" tone="subtle" numberOfLines={3}>
                 “{m.doseInstructions}”
               </AppText>
             ) : null}
@@ -90,7 +90,7 @@ export default function Medications() {
   return (
     <Screen>
       <PageHeader
-        title="Medications"
+        title="Medicines"
         subtitle="Exactly as prescribed — FAITH never changes your plan."
         right={
           <View style={{ flexDirection: 'row', gap: SPACE.xs }}>
@@ -108,7 +108,7 @@ export default function Medications() {
           illustration="mascot-medication-reminder"
           title="No medications yet"
           message="Add each medicine with the strength and instructions from your prescription label. You’ll get a daily plan and reminders."
-          action={{ label: 'Add medication', onPress: () => router.push('/medications/edit') }}
+          action={{ label: 'Add medication', icon: 'add', onPress: () => router.push('/medications/edit') }}
         />
       ) : null}
       {q.data && q.data.events.length > 0 ? (

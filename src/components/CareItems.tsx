@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { Alert, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { addDocument, deleteDocument, listDocuments } from '@/db/repo/care';
 import type { Appointment, LabTest } from '@/domain/types';
@@ -8,6 +8,7 @@ import { deleteDocumentFile, openDocument, pickAndStoreDocument } from '@/servic
 import { useApp } from '@/state/AppState';
 import { friendlyError, useAction, useQuery } from '@/state/hooks';
 import { Button, IconButton } from '@/ui/Button';
+import { showAlert } from '@/ui/dialog';
 import { Pill } from '@/ui/Feedback';
 import { AppText } from '@/ui/Text';
 import { RADIUS, SPACE, useTheme } from '@/ui/theme';
@@ -48,7 +49,7 @@ export function AppointmentRow({ a, timeZone, locale }: { a: Appointment; timeZo
         <AppText variant="bodyStrong" numberOfLines={2} style={a.status === 'cancelled' ? { textDecorationLine: 'line-through' } : undefined}>
           {a.title}
         </AppText>
-        <AppText variant="caption" tone="muted" numberOfLines={1}>
+        <AppText variant="caption" tone="muted">
           {when(a.startsAt, timeZone, locale)}
           {a.clinician ? ` · ${a.clinician}` : ''}
         </AppText>
@@ -79,7 +80,7 @@ export function LabRow({ t, timeZone, locale, resultCount }: { t: LabTest; timeZ
         <AppText variant="bodyStrong" numberOfLines={2}>
           {t.name}
         </AppText>
-        <AppText variant="caption" tone="muted" numberOfLines={1}>
+        <AppText variant="caption" tone="muted">
           {t.status === 'scheduled' ? (t.scheduledAt ? when(t.scheduledAt, timeZone, locale) : 'Not scheduled yet') : t.status === 'completed' ? `Completed${resultCount ? ` · ${resultCount} result${resultCount === 1 ? '' : 's'}` : ''}` : 'Cancelled'}
         </AppText>
         {t.status === 'scheduled' && t.fastingRequired ? <Pill label="Fasting noted" tone="warning" icon="restaurant-outline" /> : null}
@@ -106,7 +107,7 @@ export function AttachmentList({ profileId, labTestId, appointmentId }: { profil
       }
     }, { errorTitle: "Couldn't attach file" });
   const remove = (id: string, title: string) =>
-    Alert.alert('Delete attachment?', `“${title}” will be permanently deleted from this phone.`, [
+    showAlert('Delete attachment?', `“${title}” will be permanently deleted from this phone.`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -127,7 +128,7 @@ export function AttachmentList({ profileId, labTestId, appointmentId }: { profil
             accessibilityRole="button"
             accessibilityLabel={`Open ${d.title}`}
             style={{ flex: 1, minHeight: 48, justifyContent: 'center' }}
-            onPress={() => openDocument(d.relativePath, d.mimeType).catch((e) => Alert.alert("Couldn't open file", friendlyError(e)))}>
+            onPress={() => openDocument(d.relativePath, d.mimeType).catch((e) => showAlert("Couldn't open file", friendlyError(e)))}>
             <AppText variant="bodyStrong" numberOfLines={1}>
               {d.title}
             </AppText>

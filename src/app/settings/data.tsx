@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Platform, View } from 'react-native';
+import { Platform, View } from 'react-native';
 
 import { deleteProfileData, exportProfileData, readingsToCsv } from '@/db/dataManagement';
 import { listReadings } from '@/db/repo/vitals';
@@ -8,6 +8,7 @@ import { deleteProfileDocuments, shareExport } from '@/services/files';
 import { useApp, useProfile } from '@/state/AppState';
 import { friendlyError } from '@/state/hooks';
 import { Button } from '@/ui/Button';
+import { showAlert } from '@/ui/dialog';
 import { Banner } from '@/ui/Feedback';
 import { Illustration } from '@/ui/Illustration';
 import { Card, Screen, Section } from '@/ui/Layout';
@@ -35,20 +36,20 @@ export default function DataSettings() {
         await shareExport(`faith-ai-readings-${safeName(profile.displayName)}-${stamp}.csv`, readingsToCsv(readings, profile), 'text/csv');
       }
     } catch (e) {
-      Alert.alert('Export failed', friendlyError(e));
+      showAlert('Export failed', friendlyError(e));
     } finally {
       setBusy(null);
     }
   };
 
   const confirmExport = (kind: 'json' | 'csv') =>
-    Alert.alert('Export unencrypted copy?', 'The exported file is NOT encrypted. Only share it with apps or people you trust. FAITH deletes its temporary copy after sharing.', [
+    showAlert('Export unencrypted copy?', 'The exported file is NOT encrypted. Only share it with apps or people you trust. FAITH deletes its temporary copy after sharing.', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Continue', onPress: () => void doExport(kind) },
     ]);
 
   const deleteProfile = () =>
-    Alert.alert(`Delete ${profile.displayName}?`, 'Permanently deletes this profile’s readings, medications, dose history, lab tests, appointments, attachments and reminders. This cannot be undone.', [
+    showAlert(`Delete ${profile.displayName}?`, 'Permanently deletes this profile’s readings, medications, dose history, lab tests, appointments, attachments and reminders. This cannot be undone.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete permanently',
@@ -58,17 +59,17 @@ export default function DataSettings() {
             const res = await deleteProfileData(db, profile.id);
             deleteProfileDocuments(profile.id);
             await refreshProfiles();
-            Alert.alert('Deleted', `All data for this profile was removed (${res.documentPaths.length} attachment file${res.documentPaths.length === 1 ? '' : 's'} deleted).`);
+            showAlert('Deleted', `All data for this profile was removed (${res.documentPaths.length} attachment file${res.documentPaths.length === 1 ? '' : 's'} deleted).`);
             router.replace(profiles.length > 1 ? '/home' : '/onboarding');
           } catch (e) {
-            Alert.alert('Delete failed', friendlyError(e));
+            showAlert('Delete failed', friendlyError(e));
           }
         },
       },
     ]);
 
   const eraseAll = () =>
-    Alert.alert('Erase everything?', 'Deletes ALL profiles, the encrypted database and its key, attachments and scheduled reminders from this phone. This cannot be undone.', [
+    showAlert('Erase everything?', 'Deletes ALL profiles, the encrypted database and its key, attachments and scheduled reminders from this phone. This cannot be undone.', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Erase, keep AI model', style: 'destructive', onPress: () => void resetAll({ keepModels: true }).then(() => router.replace('/onboarding')) },
       { text: 'Erase everything', style: 'destructive', onPress: () => void resetAll({ keepModels: false }).then(() => router.replace('/onboarding')) },

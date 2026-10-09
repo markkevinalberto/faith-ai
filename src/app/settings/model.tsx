@@ -5,7 +5,7 @@
  * llama.cpp / whisper.cpp; in the browser it is llama.cpp compiled to WebAssembly.
  */
 import { useState, useSyncExternalStore } from 'react';
-import { Alert, Platform, View } from 'react-native';
+import { Platform, View } from 'react-native';
 
 import { engineStore, useEngineState } from '@/ai/inference/engineStore';
 import { localModels, useLocalModels } from '@/ai/inference/localModels';
@@ -14,6 +14,7 @@ import { SETTINGS, getSetting, setSetting } from '@/db/repo/profiles';
 import { useApp } from '@/state/AppState';
 import { friendlyError, useQuery } from '@/state/hooks';
 import { Button } from '@/ui/Button';
+import { showAlert } from '@/ui/dialog';
 import { Banner, Pill } from '@/ui/Feedback';
 import { Illustration } from '@/ui/Illustration';
 import { Card, Screen, Section, Stat } from '@/ui/Layout';
@@ -39,13 +40,8 @@ const subscribe = (l: () => void) => {
   return () => listeners.delete(l);
 };
 
-/** Confirmation that works on both platforms (react-native-web has no Alert). */
 function confirmThen(title: string, message: string, confirmLabel: string, onConfirm: () => void, destructive = false) {
-  if (WEB) {
-    if (globalThis.confirm(`${title}\n\n${message}`)) onConfirm();
-    return;
-  }
-  Alert.alert(title, message, [
+  showAlert(title, message, [
     { text: 'Cancel', style: 'cancel' },
     { text: confirmLabel, style: destructive ? 'destructive' : 'default', onPress: onConfirm },
   ]);

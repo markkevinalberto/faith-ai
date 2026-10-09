@@ -1,9 +1,13 @@
 /**
  * FAITH AI design tokens. Soft lavender surfaces with an indigo-to-blue brand gradient, matching the
- * mascot artwork. Text colours meet WCAG AA (≥4.5:1) on their intended surfaces; interactive
- * targets are at least 48dp.
+ * mascot artwork. Sized for older readers: body text 17, nothing essential below 14. Text colours
+ * meet WCAG AA (≥4.5:1) on their intended surfaces, including both ends of the hero gradient;
+ * field and button outlines meet 3:1; interactive targets are at least 44–48dp.
  */
-import { Platform, useColorScheme, type TextStyle, type ViewStyle } from 'react-native';
+import { useMemo } from 'react';
+import { Platform, StyleSheet, useColorScheme, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
+
+import { useTextSize } from './textSize';
 
 export interface Palette {
   bg: string;
@@ -47,7 +51,7 @@ export const LIGHT: Palette = {
   surfaceMuted: '#EFEDFC',
   surfaceSunken: '#E6E3FA',
   border: '#E1DEF5',
-  borderStrong: '#C9C4EC',
+  borderStrong: '#8781B8',
   text: '#1B1F3B',
   textMuted: '#454A6B',
   textSubtle: '#5C6080',
@@ -62,7 +66,7 @@ export const LIGHT: Palette = {
   warningSoft: '#FFF1D6',
   danger: '#C0262D',
   dangerSoft: '#FDE8EA',
-  info: '#2563EB',
+  info: '#1D4ED8',
   infoSoft: '#E6EEFD',
   demo: '#A8326E',
   demoSoft: '#FCE7F1',
@@ -70,10 +74,10 @@ export const LIGHT: Palette = {
   chartSecondary: '#3B9EF6',
   chartBand: 'rgba(91,79,224,0.10)',
   chartGrid: '#E8E6F7',
-  hero: '#4F46E5',
-  heroGradient: ['#5B4FE0', '#3B82F6'],
+  hero: '#4B40D0',
+  heroGradient: ['#5145D6', '#3157D4'],
   heroText: '#FFFFFF',
-  heroMuted: '#DCD9FF',
+  heroMuted: '#ECEBFF',
 };
 
 export const DARK: Palette = {
@@ -82,7 +86,7 @@ export const DARK: Palette = {
   surfaceMuted: '#202344',
   surfaceSunken: '#131530',
   border: '#2A2D52',
-  borderStrong: '#3A3E6B',
+  borderStrong: '#6A6EA6',
   text: '#ECEBFF',
   textMuted: '#B9B8DA',
   textSubtle: '#9E9DC4',
@@ -106,9 +110,9 @@ export const DARK: Palette = {
   chartBand: 'rgba(163,155,255,0.14)',
   chartGrid: '#25284A',
   hero: '#3B348F',
-  heroGradient: ['#4A41C9', '#2F5FC4'],
+  heroGradient: ['#4239B8', '#2A52AD'],
   heroText: '#F4F3FF',
-  heroMuted: '#CFCCF7',
+  heroMuted: '#DCDAFB',
 };
 
 export const SPACE = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32, huge: 44 } as const;
@@ -117,20 +121,55 @@ export const MIN_TOUCH = 48;
 
 const tabular: TextStyle['fontVariant'] = ['tabular-nums'];
 
+/**
+ * Type scale at the "Standard" text size. Sentence case throughout: all-caps and wide tracking are
+ * harder to read for older eyes, so the eyebrow style (overline) is bold rather than uppercase.
+ */
 export const TYPE = {
-  display: { fontSize: 30, lineHeight: 36, fontWeight: '700', letterSpacing: -0.5 },
-  title: { fontSize: 22, lineHeight: 28, fontWeight: '700', letterSpacing: -0.3 },
-  heading: { fontSize: 18, lineHeight: 24, fontWeight: '600', letterSpacing: -0.1 },
-  body: { fontSize: 16, lineHeight: 24, fontWeight: '400' },
-  bodyStrong: { fontSize: 16, lineHeight: 24, fontWeight: '600' },
-  label: { fontSize: 14, lineHeight: 20, fontWeight: '600', letterSpacing: 0.1 },
-  caption: { fontSize: 13.5, lineHeight: 19, fontWeight: '400' },
-  overline: { fontSize: 12, lineHeight: 16, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase' },
-  metric: { fontSize: 34, lineHeight: 40, fontWeight: '700', letterSpacing: -0.8, fontVariant: tabular },
-  metricSmall: { fontSize: 22, lineHeight: 28, fontWeight: '700', letterSpacing: -0.3, fontVariant: tabular },
+  display: { fontSize: 30, lineHeight: 38, fontWeight: '700', letterSpacing: -0.5 },
+  title: { fontSize: 23, lineHeight: 30, fontWeight: '700', letterSpacing: -0.3 },
+  heading: { fontSize: 19, lineHeight: 26, fontWeight: '600', letterSpacing: -0.1 },
+  body: { fontSize: 17, lineHeight: 26, fontWeight: '400' },
+  bodyStrong: { fontSize: 17, lineHeight: 26, fontWeight: '600' },
+  label: { fontSize: 15, lineHeight: 22, fontWeight: '600' },
+  caption: { fontSize: 15, lineHeight: 22, fontWeight: '400' },
+  overline: { fontSize: 14, lineHeight: 20, fontWeight: '700', letterSpacing: 0.2 },
+  metric: { fontSize: 34, lineHeight: 42, fontWeight: '700', letterSpacing: -0.8, fontVariant: tabular },
+  metricSmall: { fontSize: 24, lineHeight: 30, fontWeight: '700', letterSpacing: -0.3, fontVariant: tabular },
 } satisfies Record<string, TextStyle>;
 
 export type TypeVariant = keyof typeof TYPE;
+export type TypeScale = typeof TYPE;
+
+const round = (n: number) => Math.round(n * 2) / 2;
+
+/** Multiplies font sizes and line heights; everything else (weight, tracking) is unchanged. */
+export function scaleType(scale: number): TypeScale {
+  if (scale === 1) return TYPE;
+  const out = {} as Record<TypeVariant, TextStyle>;
+  for (const key of Object.keys(TYPE) as TypeVariant[]) {
+    const t: TextStyle = TYPE[key];
+    out[key] = { ...t, fontSize: round((t.fontSize ?? 16) * scale), lineHeight: round((t.lineHeight ?? 24) * scale) };
+  }
+  return out as TypeScale;
+}
+
+/** The type scale at the user's chosen text size (Settings → Text size). */
+export function useType(): TypeScale {
+  const { scale } = useTextSize();
+  return useMemo(() => scaleType(scale), [scale]);
+}
+
+/** Scales an explicit fontSize/lineHeight passed in a style override, or returns null if there is none. */
+export function scaleTextOverride(style: StyleProp<TextStyle>, scale: number): TextStyle | null {
+  if (scale === 1 || !style) return null;
+  const flat = StyleSheet.flatten(style);
+  if (!flat || (flat.fontSize === undefined && flat.lineHeight === undefined)) return null;
+  return {
+    ...(flat.fontSize !== undefined ? { fontSize: round(flat.fontSize * scale) } : null),
+    ...(flat.lineHeight !== undefined ? { lineHeight: round(flat.lineHeight * scale) } : null),
+  };
+}
 
 export function useTheme(): { c: Palette; dark: boolean } {
   const scheme = useColorScheme();

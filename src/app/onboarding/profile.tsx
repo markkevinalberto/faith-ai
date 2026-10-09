@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 
 import { SETTINGS, addCondition, createProfile, setSetting } from '@/db/repo/profiles';
 import type { ConditionCategory, GlucoseUnit, TemperatureUnit, WeightUnit } from '@/domain/types';
@@ -9,6 +9,7 @@ import { currentRegion, defaultUnits } from '@/services/device';
 import { useApp } from '@/state/AppState';
 import { friendlyError } from '@/state/hooks';
 import { Button } from '@/ui/Button';
+import { showAlert } from '@/ui/dialog';
 import { ChipSelect, SegmentedControl, TextField, ToggleRow } from '@/ui/Fields';
 import { Card, FormFooter, Screen, Section } from '@/ui/Layout';
 import { Illustration } from '@/ui/Illustration';
@@ -55,7 +56,7 @@ export default function ProfileSetup() {
       if (adding) router.back();
       else router.replace('/home');
     } catch (e) {
-      Alert.alert("Couldn't create profile", friendlyError(e));
+      showAlert("Couldn't create profile", friendlyError(e));
     } finally {
       setSaving(false);
     }

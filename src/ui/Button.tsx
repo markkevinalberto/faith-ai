@@ -10,7 +10,8 @@ export type IconName = ComponentProps<typeof Ionicons>['name'];
 export interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'soft' | 'ghost' | 'danger';
+  /** `onHero`: outlined white button for use on the purple hero gradient. */
+  variant?: 'primary' | 'secondary' | 'soft' | 'ghost' | 'danger' | 'onHero';
   icon?: IconName;
   loading?: boolean;
   disabled?: boolean;
@@ -30,8 +31,10 @@ export function Button({ title, onPress, variant = 'primary', icon, loading, dis
     soft: { bg: c.primarySoft, pressed: c.surfaceSunken, fg: c.primary, border: c.primarySoft },
     ghost: { bg: 'transparent', pressed: c.surfaceMuted, fg: c.primary, border: 'transparent' },
     danger: { bg: c.dangerSoft, pressed: c.surfaceSunken, fg: c.danger, border: c.dangerSoft },
+    onHero: { bg: 'rgba(255,255,255,0.12)', pressed: 'rgba(255,255,255,0.24)', fg: c.heroText, border: 'rgba(255,255,255,0.7)' },
   }[variant];
-  const height = size === 'lg' ? 56 : size === 'sm' ? 40 : MIN_TOUCH;
+  // Small buttons stay 44 tall: the browser ignores hitSlop, and older hands need the full target.
+  const height = size === 'lg' ? 56 : size === 'sm' ? 44 : MIN_TOUCH;
   return (
     <Pressable
       testID={testID}
@@ -58,8 +61,9 @@ export function Button({ title, onPress, variant = 'primary', icon, loading, dis
         <ActivityIndicator color={palette.fg} />
       ) : (
         <View style={styles.row}>
-          {icon ? <Ionicons name={icon} size={size === 'sm' ? 16 : 20} color={palette.fg} /> : null}
-          <AppText variant={size === 'sm' ? 'label' : 'bodyStrong'} style={{ color: palette.fg }} numberOfLines={1}>
+          {icon ? <Ionicons name={icon} size={size === 'sm' ? 18 : 20} color={palette.fg} /> : null}
+          {/* Wrap rather than cut off: a truncated label hides what the button does. */}
+          <AppText variant={size === 'sm' ? 'label' : 'bodyStrong'} style={{ color: palette.fg, textAlign: 'center', flexShrink: 1 }} numberOfLines={2}>
             {title}
           </AppText>
         </View>

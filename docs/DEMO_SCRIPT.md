@@ -31,7 +31,7 @@
    - Type "my hba1c is 4,7". FAITH answers the value like a nurse: where 4.7 % sits on the ADA scale (general reference, not personalised), how it compares with the last recorded result, and a **Save 4.7 % as HbA1c** button. The generated sentence must repeat the band phrase exactly or the guard discards it and shows the facts alone.
    - Care plan → Lab tests → **Add a result from a report**: pick LDL cholesterol, type 104, and the reference band appears before you save. Three taps, no range to type.
 6. **Scan and speak, still offline** (60 s):
-   - Medications → scan icon → photograph the label. ML Kit reads it on the phone. Missing fields are filled by the on-device LLM only if they are printed on the label. Review → **Use these details** → the form is pre-filled with suggested times.
+   - Medicines tab → scan icon → photograph the label. ML Kit reads it on the phone. Missing fields are filled by the on-device LLM only if they are printed on the label. Review → **Use these details** → the form is pre-filled with suggested times.
    - Care plan → Lab tests → **Scan report**. Untick any row, then save. The results now appear under Lab tests and in Ask.
    - Vitals → + → tap the mic and say "blood pressure 130 over 85, pulse 72". The form fills in for you to confirm.
 7. **Trust** (30 s):

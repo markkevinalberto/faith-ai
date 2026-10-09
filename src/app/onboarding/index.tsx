@@ -1,14 +1,16 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 
+import { TextSizePicker } from '@/components/TextSizePicker';
 import { SETTINGS, setSetting } from '@/db/repo/profiles';
 import { seedDemoProfile } from '@/services/demoSeed';
 import { useApp } from '@/state/AppState';
 import { friendlyError } from '@/state/hooks';
 import { BrandMark, MeaningLine, TAGLINE, Wordmark } from '@/ui/Brand';
 import { Button } from '@/ui/Button';
+import { showAlert } from '@/ui/dialog';
 import { Illustration, type IllustrationName } from '@/ui/Illustration';
 import { Card, Screen } from '@/ui/Layout';
 import { AppText } from '@/ui/Text';
@@ -36,7 +38,7 @@ export default function Welcome() {
       await refreshProfiles();
       router.replace('/home');
     } catch (e) {
-      Alert.alert("Couldn't create sample data", friendlyError(e));
+      showAlert("Couldn't create sample data", friendlyError(e));
     } finally {
       setSeeding(false);
     }
@@ -58,6 +60,11 @@ export default function Welcome() {
       <AppText variant="body" tone="muted">
         A private companion for living with diabetes, high blood pressure and other long-term conditions.
       </AppText>
+
+      {/* First thing a new user can change: older readers can make everything bigger before reading on. */}
+      <Card tone="muted">
+        <TextSizePicker hint={false} />
+      </Card>
 
       <View style={{ gap: SPACE.md }}>
         {POINTS.map((p) => (

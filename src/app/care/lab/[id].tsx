@@ -1,5 +1,5 @@
 import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { Alert, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { describeBandRange, findBiomarker, placeValue } from '@/ai/knowledge/biomarkers';
 import { AttachmentList } from '@/components/CareItems';
@@ -10,6 +10,7 @@ import { deleteDocumentFile } from '@/services/files';
 import { useApp, useProfile } from '@/state/AppState';
 import { useAction, useQuery } from '@/state/hooks';
 import { Button, IconButton } from '@/ui/Button';
+import { showAlert } from '@/ui/dialog';
 import { Banner, EmptyState, InlineLoading, Pill } from '@/ui/Feedback';
 import { Card, Divider, Screen, Section } from '@/ui/Layout';
 import { AppText } from '@/ui/Text';
@@ -28,7 +29,7 @@ export default function LabDetail() {
   const results = q.data.results;
 
   const remove = () =>
-    Alert.alert('Delete lab test?', 'The test, its results and attachments will be permanently deleted from this phone.', [
+    showAlert('Delete lab test?', 'The test, its results and attachments will be permanently deleted from this phone.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -43,7 +44,7 @@ export default function LabDetail() {
     ]);
 
   const removeResult = (rid: string, analyte: string) =>
-    Alert.alert('Delete result?', `Remove the ${analyte} result?`, [
+    showAlert('Delete result?', `Remove the ${analyte} result?`, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: () => void run(() => deleteLabResult(db, profile.id, rid)) },
     ]);
@@ -67,7 +68,7 @@ export default function LabDetail() {
         <Banner tone="warning" icon="clipboard-outline" title="Preparation" message={`${t.fastingRequired ? 'Fasting was noted for this test. ' : ''}${t.preparationNotes ?? ''} Follow the instructions from your clinic or lab, including whether to take medicines beforehand.`} />
       ) : null}
 
-      <Section title="Results" action={{ label: 'Add result', onPress: () => router.push({ pathname: '/care/lab/add', params: { labId: t.id } }) }}>
+      <Section title="Results" action={{ label: 'Add result', icon: 'add', onPress: () => router.push({ pathname: '/care/lab/add', params: { labId: t.id } }) }}>
         {results.length === 0 ? (
           <Card tone="muted">
             <AppText variant="body" tone="muted">

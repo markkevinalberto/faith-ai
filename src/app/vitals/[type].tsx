@@ -190,7 +190,7 @@ export default function VitalDetail() {
             illustration="mascot-empty-history"
             title="No readings in this period"
             message="Try a longer period or add a new reading."
-            action={{ label: 'Add reading', onPress: () => router.push({ pathname: '/vitals/new', params: { type, ...(customId ? { customId } : {}) } }) }}
+            action={{ label: 'Add reading', icon: 'add', onPress: () => router.push({ pathname: '/vitals/new', params: { type, ...(customId ? { customId } : {}) } }) }}
           />
         ) : (
           <Card padded={false} style={{ paddingHorizontal: SPACE.lg, paddingVertical: SPACE.xs }}>
