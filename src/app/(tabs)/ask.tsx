@@ -16,7 +16,7 @@ import { useApp, useProfile } from '@/state/AppState';
 import { friendlyError } from '@/state/hooks';
 import { IconButton } from '@/ui/Button';
 import { InlineLoading } from '@/ui/Feedback';
-import { Illustration } from '@/ui/Illustration';
+import { MascotCard } from '@/ui/Layout';
 import { AppText } from '@/ui/Text';
 import { RADIUS, SPACE, useTheme, useType } from '@/ui/theme';
 
@@ -112,13 +112,17 @@ export default function Ask() {
             <DemoBanner />
             {turns.length === 0 ? (
               <View style={{ gap: SPACE.md }}>
-                <View style={[styles.intro, { backgroundColor: c.primarySoft }]}>
-                  <Illustration name="mascot-thinking" height={104} />
-                  <AppText variant="body" tone="muted" style={{ flex: 1 }}>
-                    Ask about your readings, medications, lab results or appointments. Answers use your records on this device and a curated offline library —
-                    nothing is sent anywhere.
-                  </AppText>
-                </View>
+                <MascotCard
+                  art="mascot-thinking"
+                  height={160}
+                  tone="primary"
+                  header={
+                    <AppText variant="body">
+                      Ask about your readings, medicines, lab results or appointments. Answers use your records on this device and a curated offline library;
+                      nothing is sent anywhere.
+                    </AppText>
+                  }
+                />
                 {SUGGESTED_QUESTIONS.map((s) => (
                   <Pressable key={s} accessibilityRole="button" onPress={() => void ask(s)} style={({ pressed }) => [styles.suggestion, { borderColor: c.border, backgroundColor: pressed ? c.surfaceMuted : c.surface }]}>
                     <Ionicons name="chatbubble-ellipses-outline" size={18} color={c.primary} />
@@ -190,7 +194,6 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: SPACE.lg, paddingTop: SPACE.md, paddingBottom: SPACE.sm, flexDirection: 'row' },
   scroll: { paddingHorizontal: SPACE.lg, paddingBottom: SPACE.xl },
   inner: { width: '100%', maxWidth: 720, alignSelf: 'center', gap: SPACE.xl },
-  intro: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, padding: SPACE.md, borderRadius: RADIUS.lg },
   suggestion: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, minHeight: 52, paddingHorizontal: SPACE.md, borderRadius: RADIUS.md, borderWidth: 1 },
   question: { alignSelf: 'flex-end', maxWidth: '88%', paddingHorizontal: SPACE.lg, paddingVertical: SPACE.md, borderRadius: RADIUS.lg, borderBottomRightRadius: 6 },
   inputBar: { paddingHorizontal: SPACE.lg, paddingTop: SPACE.sm, paddingBottom: SPACE.sm, borderTopWidth: StyleSheet.hairlineWidth, gap: SPACE.xs },

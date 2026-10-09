@@ -29,7 +29,7 @@ export default function About() {
   return (
     <Screen edges={[]}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.md }}>
-        <Illustration name="mascot-health-education" height={112} />
+        <Illustration name="mascot-health-education" height={160} />
         <View style={{ flex: 1, gap: SPACE.xs }}>
           <BrandMark size={32} />
           <Wordmark size={26} />

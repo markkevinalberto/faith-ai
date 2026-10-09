@@ -146,7 +146,7 @@ export default function ModelSettings() {
   return (
     <Screen edges={[]}>
       <View style={{ alignItems: 'center' }}>
-        <Illustration name="mascot-offline" height={120} label="Works offline" />
+        <Illustration name="mascot-caring" height={150} label="Works offline" />
       </View>
       <Banner
         tone="info"

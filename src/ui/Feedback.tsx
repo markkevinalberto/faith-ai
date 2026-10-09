@@ -58,9 +58,10 @@ export function EmptyState({
 }) {
   const { c } = useTheme();
   return (
-    <View style={[styles.empty, { borderColor: c.border, backgroundColor: c.surface }]}>
+    // With a picture, FAITH rises out of the top of the box (the wrapper leaves room above it).
+    <View style={[styles.empty, { borderColor: c.border, backgroundColor: c.surface }, illustration && { marginTop: EMPTY_RISE, paddingTop: 0 }]}>
       {illustration ? (
-        <Illustration name={illustration} height={128} style={{ marginBottom: SPACE.xs }} />
+        <Illustration name={illustration} height={170} style={{ marginTop: -EMPTY_RISE, marginBottom: SPACE.xs }} />
       ) : (
         <View style={[styles.emptyIcon, { backgroundColor: c.primarySoft }]}>
           <Ionicons name={icon} size={26} color={c.primary} />
@@ -121,6 +122,9 @@ export function ErrorView({ title, message, onRetry, children }: { title: string
     </SafeAreaView>
   );
 }
+
+/** How far an empty-state picture reaches above its box. */
+const EMPTY_RISE = 56;
 
 const styles = StyleSheet.create({
   banner: { flexDirection: 'row', gap: SPACE.md, padding: SPACE.md, borderRadius: RADIUS.md },

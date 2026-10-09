@@ -15,7 +15,9 @@ import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
 import { HeroGradient } from './Brand';
 import type { IconName } from './Button';
+import { Illustration, illustrationWidth, type IllustrationName } from './Illustration';
 import { AppText } from './Text';
+import { useTextSize } from './textSize';
 import { RADIUS, SPACE, cardShadow, toneColors, useTheme, type Tone } from './theme';
 
 export interface ScreenProps {
@@ -132,6 +134,51 @@ export function Card({ children, style, onPress, accessibilityLabel, accessibili
       style={({ pressed }) => [base, pressed && Platform.OS !== 'android' && { opacity: 0.9 }]}>
       {content}
     </Pressable>
+  );
+}
+
+/**
+ * A card with FAITH large at its top-left, rising above the card's top edge, so she can be big without
+ * making the card tall. `header` sits beside her; `children` (buttons, progress) use the full width
+ * below. At the larger text sizes she shrinks a little so the text beside her stays readable.
+ */
+export function MascotCard({
+  art,
+  height = 150,
+  rise = 44,
+  tone,
+  onPress,
+  accessibilityLabel,
+  header,
+  children,
+  style,
+}: {
+  art: IllustrationName;
+  height?: number;
+  /** How far she reaches above the card's top edge. */
+  rise?: number;
+  tone?: CardProps['tone'];
+  onPress?: () => void;
+  accessibilityLabel?: string;
+  header: ReactNode;
+  children?: ReactNode;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const { scale } = useTextSize();
+  const h = Math.round(height * (scale > 1 ? 0.85 : 1));
+  const w = illustrationWidth(art, h);
+  return (
+    <View style={[{ paddingTop: rise }, style]}>
+      <Card tone={tone} onPress={onPress} accessibilityLabel={accessibilityLabel} style={{ overflow: 'visible', gap: SPACE.md }}>
+        {/* The card's padding is SPACE.lg and she stands SPACE.sm from its edge. */}
+        <View style={{ paddingLeft: w, minHeight: h - rise - SPACE.lg, justifyContent: 'center', gap: SPACE.xs }}>{header}</View>
+        {children}
+      </Card>
+      {/* Drawn after the card (and raised on Android) so she sits in front of its edge. */}
+      <View pointerEvents="none" style={styles.mascot}>
+        <Illustration name={art} height={h} />
+      </View>
+    </View>
   );
 }
 
@@ -269,6 +316,7 @@ const styles = StyleSheet.create({
   footer: { paddingHorizontal: SPACE.lg, paddingVertical: SPACE.md, gap: SPACE.sm, width: '100%', maxWidth: 720, alignSelf: 'center' },
   header: { flexDirection: 'row', alignItems: 'flex-end', paddingTop: SPACE.md, paddingBottom: SPACE.xs },
   card: { borderRadius: RADIUS.lg, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
+  mascot: { position: 'absolute', left: SPACE.sm, top: 0, zIndex: 2, elevation: 4 },
   section: { gap: SPACE.sm, marginTop: SPACE.xs },
   sectionHead: { flexDirection: 'row', alignItems: 'center', minHeight: 32, gap: SPACE.sm },
   sectionAction: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: SPACE.md, borderRadius: RADIUS.pill },

@@ -171,7 +171,7 @@ function ReadingForm({ params, existing, customTypes }: { params: Params; existi
         <Stack.Screen options={{ title: 'Reading saved' }} />
         {!saved.escalation && !coach ? (
           <View style={{ alignItems: 'center' }}>
-            <Illustration name="mascot-encouragement" height={140} />
+            <Illustration name="mascot-encouragement" height={180} />
           </View>
         ) : null}
         <Banner

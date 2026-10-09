@@ -187,7 +187,7 @@ export default function VitalDetail() {
         {readings.length === 0 ? (
           <EmptyState
             icon={builtIn ? VITAL_META[builtIn].icon : 'analytics-outline'}
-            illustration="mascot-empty-history"
+            illustration="mascot-surprised"
             title="No readings in this period"
             message="Try a longer period or add a new reading."
             action={{ label: 'Add reading', icon: 'add', onPress: () => router.push({ pathname: '/vitals/new', params: { type, ...(customId ? { customId } : {}) } }) }}

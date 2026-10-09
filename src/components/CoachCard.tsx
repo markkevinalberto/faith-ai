@@ -116,9 +116,10 @@ export function CoachCard({ subject }: { subject: CoachSubject }) {
 
   return (
     <View style={{ gap: SPACE.md }}>
-      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: SPACE.md }}>
-        <Illustration name={POSE[note.mood]} height={96} />
-        <View style={{ flex: 1, paddingBottom: SPACE.xs }}>
+      {/* She stands behind the top of her speech bubble, which is drawn over her lower half. */}
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: SPACE.md, marginBottom: -40 }}>
+        <Illustration name={POSE[note.mood]} height={150} />
+        <View style={{ flex: 1, paddingBottom: 40 + SPACE.sm }}>
           <AppText variant="heading" accessibilityRole="header">
             FAITH
           </AppText>

@@ -17,7 +17,7 @@ import { AppText } from '@/ui/Text';
 import { RADIUS, SPACE, useTheme } from '@/ui/theme';
 
 const POINTS: { art: IllustrationName; title: string; body: string }[] = [
-  { art: 'mascot-offline', title: 'Works offline', body: 'Your records stay on this phone. No account, no cloud.' },
+  { art: 'feature-offline', title: 'Works offline', body: 'Your records stay on this phone. No account, no cloud.' },
   { art: 'feature-shield', title: 'Encrypted', body: 'Stored in an encrypted database with keys kept in secure storage.' },
   { art: 'feature-ai-globe', title: 'On-device AI', body: 'Ask about your readings, medicines and lab results — answered on your phone.' },
   { art: 'feature-bell', title: 'Reminders that respect you', body: 'Dose, refill, lab and appointment reminders. You decide what is recorded.' },
@@ -47,7 +47,7 @@ export default function Welcome() {
   return (
     <Screen edges={['top', 'bottom']}>
       <View style={[styles.hero, { backgroundColor: c.primarySoft }]}>
-        <Illustration name="mascot-hero" height={compact ? 168 : 210} label="FAITH, a friendly nurse character, waving hello" />
+        <Illustration name="mascot-hero" height={compact ? 196 : 240} label="FAITH, a friendly nurse character, waving hello" />
         <View style={styles.heroText}>
           <BrandMark size={compact ? 34 : 40} />
           <Wordmark size={compact ? 25 : 30} />
@@ -69,7 +69,7 @@ export default function Welcome() {
       <View style={{ gap: SPACE.md }}>
         {POINTS.map((p) => (
           <View key={p.title} style={styles.point}>
-            <Illustration name={p.art} height={48} />
+            <Illustration name={p.art} height={64} />
             <View style={{ flex: 1 }}>
               <AppText variant="bodyStrong">{p.title}</AppText>
               <AppText variant="caption" tone="muted">

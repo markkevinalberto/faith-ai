@@ -55,7 +55,7 @@ export default function CarePlan() {
         <View style={{ gap: SPACE.lg }}>
           <Button title="Add appointment" icon="add" variant="soft" onPress={() => router.push('/care/appointment/edit')} />
           {upcomingAppts.length === 0 && pastAppts.length === 0 ? (
-            <EmptyState icon="calendar-outline" illustration="empty-no-appointments" title="No appointments" message="Add visits with your clinicians. FAITH can remind you and help you prepare questions." />
+            <EmptyState icon="calendar-outline" illustration="mascot-standing" title="No appointments" message="Add visits with your clinicians. FAITH can remind you and help you prepare questions." />
           ) : null}
           {upcomingAppts.length > 0 ? (
             <Section title="Upcoming">{list(upcomingAppts.map((a) => <AppointmentRow key={a.id} a={a} timeZone={timeZone} locale={locale} />))}</Section>
@@ -71,7 +71,7 @@ export default function CarePlan() {
             {Platform.OS !== 'web' ? <Button title="Scan a report" icon="scan-outline" variant="soft" onPress={() => router.push('/care/lab/scan')} style={{ flex: 1 }} /> : null}
           </View>
           {scheduledLabs.length === 0 && doneLabs.length === 0 ? (
-            <EmptyState icon="flask-outline" illustration="empty-no-lab-tests" title="No lab tests yet" message="Type in results from a report you already have, scan the report, or schedule an upcoming test with its preparation notes." />
+            <EmptyState icon="flask-outline" illustration="mascot-health-education" title="No lab tests yet" message="Type in results from a report you already have, scan the report, or schedule an upcoming test with its preparation notes." />
           ) : null}
           {scheduledLabs.length > 0 ? <Section title="Scheduled">{list(scheduledLabs.map((t) => <LabRow key={t.id} t={t} timeZone={timeZone} locale={locale} />))}</Section> : null}
           {doneLabs.length > 0 ? (

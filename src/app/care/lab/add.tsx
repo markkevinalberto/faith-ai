@@ -164,7 +164,7 @@ export default function AddResult() {
         <Stack.Screen options={{ title: 'Result saved' }} />
         {!saved.coach ? (
           <View style={{ alignItems: 'center' }}>
-            <Illustration name="mascot-encouragement" height={130} />
+            <Illustration name="mascot-encouragement" height={180} />
           </View>
         ) : null}
         <Banner

@@ -208,7 +208,7 @@ export default function ScanLabReport() {
     <Screen edges={[]}>
       <Stack.Screen options={{ title: 'Scan a lab report' }} />
       <View style={{ alignItems: 'center' }}>
-        <Illustration name="empty-no-lab-tests" height={150} label="Scan a lab report" />
+        <Illustration name="mascot-health-education" height={150} label="Scan a lab report" />
       </View>
       <AppText variant="heading" center>
         Scan your lab results

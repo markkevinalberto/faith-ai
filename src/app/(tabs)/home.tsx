@@ -22,8 +22,7 @@ import { useAction, useNow, useQuery } from '@/state/hooks';
 import { Button } from '@/ui/Button';
 import { EscalationCard } from '@/ui/EscalationCard';
 import { Banner, EmptyState, InlineLoading, Pill } from '@/ui/Feedback';
-import { Illustration } from '@/ui/Illustration';
-import { Card, PageHeader, Screen, Section } from '@/ui/Layout';
+import { Card, MascotCard, PageHeader, Screen, Section } from '@/ui/Layout';
 import { AppText } from '@/ui/Text';
 import { useTextSize } from '@/ui/textSize';
 import { RADIUS, SPACE, useTheme } from '@/ui/theme';
@@ -126,15 +125,18 @@ export default function Home() {
               </View>
             </Card>
           ) : data.activeMeds > 0 ? (
-            <Card style={styles.caughtUp}>
-              <Illustration name="mascot-celebrating" height={96} />
-              <View style={{ flex: 1, gap: 2 }}>
-                <AppText variant="heading">All caught up</AppText>
-                <AppText variant="caption" tone="muted">
-                  No more doses scheduled for now. Nice work keeping your record up to date.
-                </AppText>
-              </View>
-            </Card>
+            <MascotCard
+              art="mascot-celebrating"
+              height={140}
+              header={
+                <>
+                  <AppText variant="heading">All caught up</AppText>
+                  <AppText variant="caption" tone="muted">
+                    No more doses scheduled for now. Nice work keeping your record up to date.
+                  </AppText>
+                </>
+              }
+            />
           ) : null}
 
           {data.activeMeds > 0 && data.permission !== 'granted' && !profile.isDemo ? (
@@ -258,16 +260,16 @@ export default function Home() {
           ) : null}
 
           {/* Assistant entry */}
-          <Card style={{ gap: SPACE.md }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.sm }}>
-              <Illustration name="mascot-thinking" height={72} />
-              <View style={{ flex: 1 }}>
+          <MascotCard
+            art="mascot-thinking"
+            header={
+              <>
                 <AppText variant="heading">Ask FAITH</AppText>
                 <AppText variant="caption" tone="muted">
-                  Answers from your own records, computed and explained on this phone.
+                  Answers from your own records, computed and explained on this {Platform.OS === 'web' ? 'device' : 'phone'}.
                 </AppText>
-              </View>
-            </View>
+              </>
+            }>
             <View style={{ gap: SPACE.sm }}>
               {ASK_CHIPS.map((text) => (
                 <Pressable
@@ -282,7 +284,7 @@ export default function Home() {
                 </Pressable>
               ))}
             </View>
-          </Card>
+          </MascotCard>
         </>
       ) : null}
     </Screen>
@@ -298,6 +300,5 @@ const styles = StyleSheet.create({
   tile: { flexBasis: '47%', flexGrow: 1, borderRadius: RADIUS.lg, borderWidth: StyleSheet.hairlineWidth, padding: SPACE.lg, gap: 4, minHeight: 120 },
   tileHead: { flexDirection: 'row', alignItems: 'center', gap: SPACE.xs },
   upcoming: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, minHeight: 72, paddingVertical: SPACE.sm },
-  caughtUp: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md },
   askChip: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, minHeight: 48, paddingHorizontal: SPACE.md, borderRadius: RADIUS.md, borderWidth: 1 },
 });

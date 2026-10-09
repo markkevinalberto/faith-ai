@@ -78,7 +78,7 @@ export default function DataSettings() {
   return (
     <Screen edges={[]}>
       <View style={{ alignItems: 'center' }}>
-        <Illustration name="status-secure-storage" height={120} label="Secure storage" />
+        <Illustration name="status-secure-storage" height={140} label="Secure storage" />
       </View>
       <Section title="How your data is stored">
         <Card style={{ gap: SPACE.sm }}>

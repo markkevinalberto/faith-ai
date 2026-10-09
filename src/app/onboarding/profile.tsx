@@ -65,7 +65,7 @@ export default function ProfileSetup() {
   return (
     <Screen edges={[]} keyboard footer={<FormFooter><Button title={adding ? 'Add profile' : 'Continue'} icon="checkmark" size="lg" loading={saving} onPress={() => void save()} /></FormFooter>}>
       <View style={{ alignItems: 'center', marginTop: SPACE.sm }}>
-        <Illustration name="onboard-setup-profile" height={140} />
+        <Illustration name="mascot-standing" height={190} />
       </View>
       <AppText variant="body" tone="muted">
         {adding
