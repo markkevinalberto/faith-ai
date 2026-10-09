@@ -29,6 +29,17 @@ describe('safety & intent router', () => {
     expect(routeQuestion(q, ctx).intent).toBe(intent);
   });
 
+  it('answers a stated value as a value, not as a definition', () => {
+    const r = routeQuestion('my hba1c is 4,7', ctx);
+    expect(r.intent).toBe('reported_value');
+    expect(r.reported).toMatchObject({ kind: 'lab', value: 4.7, unit: '%' });
+    expect(routeQuestion('fbs 5.6 this morning', ctx).intent).toBe('reported_value');
+    expect(routeQuestion('what is hba1c', ctx).intent).toBe('explain_term');
+    expect(routeQuestion('what were my latest lab results?', ctx).intent).toBe('lab_summary');
+    expect(routeQuestion('I missed my metformin, should I take two?', ctx).intent).toBe('dose_change');
+    expect(routeQuestion('my sugar is 45', ctx)).toMatchObject({ intent: 'reported_value', escalation: { ruleId: 'glucose.level2_low' } });
+  });
+
   it('checks emergencies before anything else', () => {
     expect(routeQuestion('Should I double my dose? I have chest pain', ctx).intent).toBe('emergency');
   });

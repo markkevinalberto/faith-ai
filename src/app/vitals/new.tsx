@@ -24,7 +24,8 @@ import { BP_CONTEXT_OPTIONS, GLUCOSE_CONTEXT_OPTIONS, VITAL_META, VITAL_ORDER, a
 
 type Kind = VitalType;
 
-type Params = { type?: string; id?: string; customId?: string };
+/** `value`, `unit`, `context`, `systolic`, `diastolic` and `pulse` pre-fill a new reading (from Ask FAITH); the person still saves it. */
+type Params = { type?: string; id?: string; customId?: string; value?: string; unit?: string; context?: string; systolic?: string; diastolic?: string; pulse?: string };
 
 export default function ReadingFormLoader() {
   const params = useLocalSearchParams<Params>();
@@ -46,14 +47,19 @@ function ReadingForm({ params, existing, customTypes }: { params: Params; existi
 
   const [kind, setKind] = useState<Kind>(existing?.type ?? (params.type as Kind) ?? 'glucose');
   const [customTypeId, setCustomTypeId] = useState<string | null>(existing ? existing.customTypeId : (params.customId ?? null));
-  const [value, setValue] = useState(existing && !isBp ? String(existing.value) : '');
-  const [glucoseUnit, setGlucoseUnit] = useState<GlucoseUnit>(existing?.type === 'glucose' ? (existing.unit as GlucoseUnit) : profile.glucoseUnit);
-  const [weightUnit, setWeightUnit] = useState<WeightUnit>(existing?.type === 'weight' ? (existing.unit as WeightUnit) : profile.weightUnit);
-  const [tempUnit, setTempUnit] = useState<TemperatureUnit>(existing?.type === 'temperature' ? (existing.unit.replace('°', '') as TemperatureUnit) : profile.temperatureUnit);
-  const [systolic, setSystolic] = useState(isBp ? String(existing.systolic) : '');
-  const [diastolic, setDiastolic] = useState(isBp ? String(existing.diastolic) : '');
-  const [pulse, setPulse] = useState(isBp && existing.pulse ? String(existing.pulse) : '');
-  const [context, setContext] = useState<string | null>(existing?.context ?? null);
+  const prefill = existing ? {} : params;
+  const [value, setValue] = useState(existing && !isBp ? String(existing.value) : (prefill.value ?? ''));
+  const [glucoseUnit, setGlucoseUnit] = useState<GlucoseUnit>(
+    existing?.type === 'glucose' ? (existing.unit as GlucoseUnit) : prefill.unit === 'mmol/L' || prefill.unit === 'mg/dL' ? prefill.unit : profile.glucoseUnit,
+  );
+  const [weightUnit, setWeightUnit] = useState<WeightUnit>(existing?.type === 'weight' ? (existing.unit as WeightUnit) : prefill.unit === 'kg' || prefill.unit === 'lb' ? prefill.unit : profile.weightUnit);
+  const [tempUnit, setTempUnit] = useState<TemperatureUnit>(
+    existing?.type === 'temperature' ? (existing.unit.replace('°', '') as TemperatureUnit) : prefill.unit === 'C' || prefill.unit === 'F' ? prefill.unit : profile.temperatureUnit,
+  );
+  const [systolic, setSystolic] = useState(isBp ? String(existing.systolic) : (prefill.systolic ?? ''));
+  const [diastolic, setDiastolic] = useState(isBp ? String(existing.diastolic) : (prefill.diastolic ?? ''));
+  const [pulse, setPulse] = useState(isBp && existing.pulse ? String(existing.pulse) : (prefill.pulse ?? ''));
+  const [context, setContext] = useState<string | null>(existing?.context ?? prefill.context ?? null);
   const [measuredAt, setMeasuredAt] = useState(() => (existing ? new Date(existing.measuredAt) : new Date()));
   const [notes, setNotes] = useState(existing?.notes ?? '');
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});

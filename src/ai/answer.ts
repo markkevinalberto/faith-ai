@@ -11,9 +11,39 @@ import type { InferenceEngine } from './inference/types';
 import { getArticle, type KnowledgeArticle } from './knowledge/library';
 import { searchLibrary } from './knowledge/search';
 import { buildContextText, buildMessages } from './prompt';
+import type { ReportedValue } from './reported';
 import { retrieve, type Fact } from './retrieval';
 import { routeQuestion, type Intent } from './router';
 import { hybridLibrarySearch, type Embedder } from './semantic';
+
+/** A follow-up the person can tap, e.g. saving a value they mentioned. `href` is an app route. */
+export interface AnswerAction {
+  label: string;
+  href: string;
+}
+
+const q = (params: Record<string, string | number | null | undefined>) =>
+  Object.entries(params)
+    .filter(([, v]) => v !== null && v !== undefined && v !== '')
+    .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
+    .join('&');
+
+/** Offers to record a stated value in the right form, pre-filled. Nothing is saved until the person confirms. */
+export function actionsForReported(reported: ReportedValue | null): AnswerAction[] {
+  if (!reported) return [];
+  if (reported.kind === 'lab') {
+    const { biomarker, value, unit } = reported;
+    return [{ label: `Save ${value} ${unit} as ${biomarker.name}`, href: `/care/lab/add?${q({ biomarker: biomarker.id, value, unit })}` }];
+  }
+  const r = reported.reading;
+  if (r.type === 'blood_pressure') {
+    return [{ label: `Save ${r.systolic}/${r.diastolic} mmHg as a blood pressure reading`, href: `/vitals/new?${q({ type: 'blood_pressure', systolic: r.systolic, diastolic: r.diastolic, pulse: r.pulse })}` }];
+  }
+  const unit = 'unit' in r ? r.unit : null;
+  const context = r.type === 'glucose' ? r.context : null;
+  const names: Record<string, string> = { glucose: 'glucose', weight: 'weight', pulse: 'pulse', spo2: 'oxygen', temperature: 'temperature' };
+  return [{ label: `Save ${r.value}${unit ? ` ${unit}` : ''} as a ${names[r.type]} reading`, href: `/vitals/new?${q({ type: r.type, value: r.value, unit, context })}` }];
+}
 
 export interface AssistantAnswer {
   question: string;
@@ -29,6 +59,8 @@ export interface AssistantAnswer {
   limitations: string[];
   /** How records and articles were found: keywords only, or keywords plus on-device embeddings. */
   searchMode: 'keyword' | 'semantic';
+  /** Follow-ups the person can tap, such as saving a value they mentioned. */
+  actions: AnswerAction[];
 }
 
 export interface AnswerParams {
@@ -52,9 +84,10 @@ const REFUSALS: Partial<Record<Intent, string>> = {
     "I can't diagnose conditions. Here is a summary of your recorded readings that you could discuss with your clinician — I can also help you prepare questions.",
 };
 
-const MODEL_INTENTS: Intent[] = ['readings_summary', 'medication_lookup', 'lab_summary', 'appointments', 'clinician_questions', 'explain_term', 'general'];
+const MODEL_INTENTS: Intent[] = ['readings_summary', 'medication_lookup', 'lab_summary', 'appointments', 'clinician_questions', 'explain_term', 'general', 'reported_value'];
 
 function headlineFor(intent: Intent, factCount: number, days: number): string {
+  if (intent === 'reported_value') return 'Here is the value you mentioned, next to the reference ranges and your own records.';
   if (factCount === 0 && intent !== 'explain_term') return "I couldn't find matching records on this device.";
   switch (intent) {
     case 'readings_summary':
@@ -97,6 +130,7 @@ export async function answerQuestion(p: AnswerParams): Promise<AssistantAnswer> 
     generationNote: null,
     limitations: [],
     searchMode: 'keyword',
+    actions: [],
   };
 
   if (route.intent === 'emergency') {
@@ -120,7 +154,26 @@ export async function answerQuestion(p: AnswerParams): Promise<AssistantAnswer> 
   let references: KnowledgeArticle[];
   if (route.intent === 'dose_change') references = [getArticle('missed-dose') as KnowledgeArticle];
   else if (route.intent === 'prescribe') references = [];
-  else {
+  else if (route.intent === 'reported_value' && route.reported) {
+    // The article that explains exactly this test or reading, nothing else.
+    const r = route.reported;
+    const id =
+      r.kind === 'lab'
+        ? r.biomarker.articleId
+        : r.reading.type === 'glucose'
+          ? r.reading.context === 'after_meal' || r.reading.context === 'random'
+            ? 'post-meal-glucose'
+            : 'fasting-glucose'
+          : r.reading.type === 'blood_pressure'
+            ? 'blood-pressure-numbers'
+            : r.reading.type === 'spo2'
+              ? 'spo2'
+              : r.reading.type === 'pulse'
+                ? 'pulse'
+                : null;
+    const article = id ? getArticle(id) : null;
+    references = article ? [article] : [];
+  } else {
     const k = route.intent === 'explain_term' ? 2 : 1;
     references = searchLibrary(question, k).map((r) => r.article);
     if (embedder) {
@@ -142,6 +195,7 @@ export async function answerQuestion(p: AnswerParams): Promise<AssistantAnswer> 
     references,
     limitations: retrieval.limitations,
     searchMode: semantic ? 'semantic' : 'keyword',
+    actions: route.intent === 'reported_value' ? actionsForReported(route.reported) : [],
   };
 
   if (!MODEL_INTENTS.includes(route.intent)) return answer;

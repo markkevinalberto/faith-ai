@@ -1,6 +1,7 @@
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { Alert, Pressable, View } from 'react-native';
 
+import { describeBandRange, findBiomarker, placeValue } from '@/ai/knowledge/biomarkers';
 import { AttachmentList } from '@/components/CareItems';
 import { deleteLabResult, deleteLabTest, getLabTest, listLabResults, setLabStatus } from '@/db/repo/care';
 import { formatTargetRange } from '@/domain/targets';
@@ -66,7 +67,7 @@ export default function LabDetail() {
         <Banner tone="warning" icon="clipboard-outline" title="Preparation" message={`${t.fastingRequired ? 'Fasting was noted for this test. ' : ''}${t.preparationNotes ?? ''} Follow the instructions from your clinic or lab, including whether to take medicines beforehand.`} />
       ) : null}
 
-      <Section title="Results" action={{ label: 'Add result', onPress: () => router.push({ pathname: '/care/lab/result', params: { labId: t.id } }) }}>
+      <Section title="Results" action={{ label: 'Add result', onPress: () => router.push({ pathname: '/care/lab/add', params: { labId: t.id } }) }}>
         {results.length === 0 ? (
           <Card tone="muted">
             <AppText variant="body" tone="muted">
@@ -77,6 +78,8 @@ export default function LabDetail() {
           <Card padded={false} style={{ paddingHorizontal: SPACE.lg, paddingVertical: SPACE.sm }}>
             {results.map((r, i) => {
               const ref = r.referenceText ?? (r.referenceLow !== null || r.referenceHigh !== null ? formatTargetRange(r.referenceLow, r.referenceHigh, r.unit ?? '') : null);
+              const biomarker = findBiomarker(r.analyte)?.biomarker;
+              const placement = biomarker && r.valueNum !== null ? placeValue(biomarker, r.valueNum, r.unit ?? biomarker.units[0]) : null;
               return (
                 <View key={r.id}>
                   {i > 0 ? <Divider /> : null}
@@ -94,13 +97,18 @@ export default function LabDetail() {
                       {ref ? ` · Report range: ${ref}` : ''}
                       {r.labFlag ? ` · Flag on report: ${r.labFlag}` : ''}
                     </AppText>
+                    {placement ? (
+                      <AppText variant="caption" tone="muted">
+                        General reference: {placement.band.label} ({describeBandRange(placement.band, placement.canonicalUnit)}), not personalised.
+                      </AppText>
+                    ) : null}
                   </Pressable>
                 </View>
               );
             })}
           </Card>
         )}
-        <Button title="Add a result from the report" icon="add" variant="soft" onPress={() => router.push({ pathname: '/care/lab/result', params: { labId: t.id } })} />
+        <Button title="Add a result from the report" icon="add" variant="soft" onPress={() => router.push({ pathname: '/care/lab/add', params: { labId: t.id } })} />
         <AppText variant="caption" tone="subtle">
           Values and ranges are shown exactly as you entered them from the report. FAITH doesn’t interpret lab results — your clinician does.
         </AppText>

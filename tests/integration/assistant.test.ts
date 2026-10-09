@@ -157,6 +157,40 @@ describe('with an on-device engine', () => {
   });
 });
 
+describe('values the person states in the chat', () => {
+  it('positions a stated HbA1c against the reference scale and earlier results, and offers to save it', async () => {
+    const a = await ask('my hba1c is 4,7');
+    expect(a.intent).toBe('reported_value');
+    expect(a.refusal).toBeNull();
+    expect(a.facts.map((f) => f.label)).toEqual(['You told me · HbA1c', 'General reference · HbA1c', 'Your records · HbA1c']);
+    expect(a.facts[1].text).toMatch(/4\.7 % falls in: below the range ADA uses for prediabetes \(below 5\.7 %\)/);
+    expect(a.facts[1].text).toMatch(/not personalised/);
+    expect(a.facts[2].text).toMatch(/7\.4 % on Sep 20, 2026\. 4\.7 % is 2\.7 % lower than that result\./);
+    expect(a.references.map((r) => r.id)).toEqual(['hba1c']);
+    expect(a.actions).toEqual([{ label: 'Save 4.7 % as HbA1c', href: '/care/lab/add?biomarker=hba1c&value=4.7&unit=%25' }]);
+  });
+
+  it('lets the model reply like a nurse when it stays within the facts, and blocks "normal"', async () => {
+    const good = await ask(
+      'my hba1c is 4,7',
+      new FakeEngine(() => 'Thank you for telling me. 4.7 % sits below the 5.7 % threshold ADA uses for prediabetes, and it is lower than your last recorded 7.4 %. Shall I save it with today’s date?'),
+    );
+    expect(good.generated?.text).toMatch(/Shall I save it/);
+    const bad = await ask('my hba1c is 4,7', new FakeEngine(() => 'Great news, your HbA1c is normal.'));
+    expect(bad.generated).toBeNull();
+    expect(bad.generationNote).toMatch(/safety_claim/);
+  });
+
+  it('compares a stated glucose reading with the right target', async () => {
+    const a = await ask('fbs 5.6 this morning');
+    expect(a.intent).toBe('reported_value');
+    expect(a.facts[0].text).toMatch(/5\.6 mmol\/L \(fasting\)/);
+    expect(a.facts[1].text).toMatch(/^Within the general reference range \(not personalised\) of 80–130 mg\/dL/);
+    expect(a.actions[0].href).toBe('/vitals/new?type=glucose&value=5.6&unit=mmol%2FL&context=fasting');
+    expect(a.references[0].id).toBe('fasting-glucose');
+  });
+});
+
 describe('semantic search with an on-device embedding model', () => {
   /** Fake embedder: concept vectors, so "stomach" ≈ "nausea" without sharing a keyword. */
   const CONCEPTS = [

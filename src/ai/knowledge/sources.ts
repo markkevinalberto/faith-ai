@@ -124,6 +124,27 @@ export const SOURCES: Record<string, ReferenceSource> = {
     year: 2003,
     url: 'https://www.who.int/publications/i/item/9241545992',
   },
+  'nhlbi-atp3': {
+    id: 'nhlbi-atp3',
+    title: 'Third Report of the National Cholesterol Education Program (NCEP) Expert Panel (ATP III), Final Report',
+    publisher: 'National Heart, Lung, and Blood Institute, NIH (Circulation 2002;106:3143–3421)',
+    year: 2002,
+    url: 'https://www.nhlbi.nih.gov/files/docs/resources/heart/atp3full.pdf',
+  },
+  'medlineplus-labs': {
+    id: 'medlineplus-labs',
+    title: 'Medical Tests (typical laboratory reference ranges for adults)',
+    publisher: 'MedlinePlus, U.S. National Library of Medicine',
+    year: 2025,
+    url: 'https://medlineplus.gov/lab-tests/',
+  },
+  'who-haemoglobin': {
+    id: 'who-haemoglobin',
+    title: 'Guideline on haemoglobin cutoffs to define anaemia in individuals and populations',
+    publisher: 'World Health Organization',
+    year: 2024,
+    url: 'https://www.who.int/publications/i/item/9789240088542',
+  },
 };
 
 export function getSource(id: string): ReferenceSource | null {

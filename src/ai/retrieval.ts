@@ -12,7 +12,7 @@ import { evaluateReading } from '../domain/escalation';
 import { averageDailyDoses, describeDays } from '../domain/schedule';
 import { adherence, linearTrend, mean, rangeBreakdown, summarize } from '../domain/stats';
 import { estimateSupply } from '../domain/supply';
-import { formatTargetRange, glucoseMetricForContext, resolveTarget } from '../domain/targets';
+import { classifyAgainst, describePosition, formatTargetRange, glucoseMetricForContext, resolveTarget } from '../domain/targets';
 import { formatDateTime, formatLocalDate, formatLocalTime } from '../domain/time';
 import type { ClinicianTarget, GlucoseContext, Profile, VitalReading } from '../domain/types';
 import {
@@ -26,7 +26,10 @@ import {
   mgdlToGlucoseUnit,
   roundTo,
 } from '../domain/units';
+import { describeBandRange, describeBands, findBiomarker, placeValue } from './knowledge/biomarkers';
 import { searchLibrary, tokenize } from './knowledge/search';
+import { getSource } from './knowledge/sources';
+import type { ReportedValue } from './reported';
 import type { MetricHint, Route } from './router';
 import { RECORD_MIN_SIMILARITY, rankBySimilarity, type Embedder } from './semantic';
 
@@ -503,9 +506,97 @@ export async function metricFacts(ctx: RetrievalContext, metrics: MetricHint[], 
   return out;
 }
 
+const sourceTitles = (ids: string[]) => ids.map((id) => getSource(id)?.title ?? id).join('; ');
+
+/**
+ * Facts for a value the person just stated: the value itself, where it sits on the published
+ * reference scale (general, not personalised), and how it compares with their own earlier results.
+ * Nothing is saved; the answer offers a button for that.
+ */
+export async function reportedValueFacts(ctx: RetrievalContext, reported: ReportedValue): Promise<RetrievalResult> {
+  const facts: Fact[] = [];
+  const limitations: string[] = [];
+  const targets = await listTargets(ctx.db, ctx.profile.id);
+
+  if (reported.kind === 'lab') {
+    const { biomarker, value, unit } = reported;
+    const shown = `${value} ${unit}`;
+    facts.push({ id: 'reported', kind: 'record', label: `You told me · ${biomarker.name}`, text: `${shown}, mentioned just now (not saved yet).` });
+    const placement = placeValue(biomarker, value, unit);
+    if (placement) {
+      const converted = placement.canonicalUnit !== unit ? ` (${placement.canonicalValue} ${placement.canonicalUnit})` : '';
+      facts.push({
+        id: 'reference',
+        kind: 'computed',
+        label: `General reference · ${biomarker.name}`,
+        text: `${shown}${converted} falls in: ${placement.band.label} (${describeBandRange(placement.band, placement.canonicalUnit)}). Full scale: ${describeBands(biomarker)}. ${placement.reference.note} General reference, not personalised. Source: ${sourceTitles(placement.reference.sourceIds)}.`,
+      });
+    } else if (biomarker.reference) {
+      limitations.push(`I couldn't compare ${shown} with the reference scale, which uses ${biomarker.units[0]}.`);
+    } else {
+      limitations.push(`FAITH has no general reference range for ${biomarker.name}. Compare it with the range printed on your report.`);
+    }
+    const previous = (await listLabResults(ctx.db, ctx.profile.id))
+      .filter((r) => findBiomarker(r.analyte)?.biomarker.id === biomarker.id)
+      .sort((a, b) => (a.resultDate < b.resultDate ? 1 : -1));
+    if (previous.length > 0) {
+      const last = previous[0];
+      let text = `Your last recorded ${biomarker.name}: ${last.valueNum ?? last.valueText}${last.unit ? ` ${last.unit}` : ''} on ${formatLocalDate(last.resultDate, ctx.profile.locale)}.`;
+      if (last.valueNum !== null && last.unit === unit) {
+        const diff = roundTo(value - last.valueNum, Math.max(1, biomarker.decimals));
+        text += diff === 0 ? ` ${shown} is the same as that result.` : ` ${shown} is ${Math.abs(diff)} ${unit} ${diff < 0 ? 'lower' : 'higher'} than that result.`;
+      }
+      facts.push({ id: 'previous', kind: 'record', label: `Your records · ${biomarker.name}`, text, at: last.resultDate });
+    } else {
+      limitations.push(`No earlier ${biomarker.name} result is recorded in FAITH yet, so there is nothing to compare with.`);
+    }
+    return { facts, limitations };
+  }
+
+  const r = reported.reading;
+  if (r.type === 'glucose') {
+    const unit = r.unit ?? ctx.profile.glucoseUnit;
+    const mgdl = unit === 'mg/dL' ? r.value : r.value * 18.0182;
+    const when = r.context ? CONTEXT_LABEL[r.context].toLowerCase() : null;
+    facts.push({ id: 'reported', kind: 'record', label: 'You told me · Glucose', text: `${r.value} ${unit}${when ? ` (${when})` : ''}, mentioned just now (not saved yet).` });
+    const metric = glucoseMetricForContext(r.context);
+    const target = metric ? resolveTarget(metric, targets) : null;
+    if (target) {
+      const position = classifyAgainst(mgdl, target);
+      facts.push({ id: 'target', kind: 'computed', label: 'Compared with your target', text: `${describePosition(position, target)} of ${glucoseRange(target.low, target.high, ctx)}. Target source: ${target.sourceLabel}.` });
+    } else {
+      limitations.push('Tell me when it was taken (fasting, before or after a meal, bedtime) and I can compare it with the right target.');
+    }
+    const recent = await glucoseFacts(ctx, 7, targets);
+    facts.push(...recent.facts.filter((f) => f.id === 'glucose.summary' || f.id === 'glucose.latest').slice(0, 2));
+    return { facts, limitations };
+  }
+  if (r.type === 'blood_pressure') {
+    facts.push({ id: 'reported', kind: 'record', label: 'You told me · Blood pressure', text: `${formatBloodPressure(r.systolic, r.diastolic)}${r.pulse ? `, pulse ${r.pulse} bpm` : ''}, mentioned just now (not saved yet).` });
+    const sys = resolveTarget('bp_systolic', targets);
+    const dia = resolveTarget('bp_diastolic', targets);
+    if (sys && dia) {
+      const ps = classifyAgainst(r.systolic, sys);
+      const pd = classifyAgainst(r.diastolic, dia);
+      facts.push({ id: 'target', kind: 'computed', label: 'Compared with your target', text: `Systolic ${r.systolic}: ${describePosition(ps, sys).toLowerCase()} (${formatTargetRange(sys.low, sys.high, 'mmHg')}). Diastolic ${r.diastolic}: ${describePosition(pd, dia).toLowerCase()} (${formatTargetRange(dia.low, dia.high, 'mmHg')}). Target source: ${sys.sourceLabel}.` });
+    }
+    const recent = await bloodPressureFacts(ctx, 14, targets);
+    facts.push(...recent.facts.slice(0, 2));
+    return { facts, limitations };
+  }
+  const label = { weight: 'Weight', pulse: 'Pulse', spo2: 'Oxygen saturation', temperature: 'Temperature' }[r.type];
+  const unit = 'unit' in r && r.unit ? ` ${r.unit}` : r.type === 'spo2' ? ' %' : r.type === 'pulse' ? ' bpm' : '';
+  facts.push({ id: 'reported', kind: 'record', label: `You told me · ${label}`, text: `${r.value}${unit}, mentioned just now (not saved yet).` });
+  const recent = await simpleVitalFacts(ctx, r.type, 30);
+  facts.push(...recent.facts.slice(0, 2));
+  return { facts, limitations };
+}
+
 /** Facts for a routed question. */
 export async function retrieve(route: Route, question: string, ctx: RetrievalContext, embedder?: Embedder | null): Promise<RetrievalResult & { mode?: 'keyword' | 'semantic' }> {
   switch (route.intent) {
+    case 'reported_value':
+      return route.reported ? reportedValueFacts(ctx, route.reported) : { facts: [], limitations: [] };
     case 'readings_summary':
       return metricFacts(ctx, route.metrics.length ? route.metrics : ['glucose', 'blood_pressure'], route.timeframeDays);
     case 'medication_lookup':

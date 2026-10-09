@@ -6,12 +6,14 @@
  *   4. "Reference library" (curated articles with sources and review status).
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { router, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { AssistantAnswer } from '@/ai/answer';
 import { LIBRARY_VERSION } from '@/ai/knowledge/library';
 import { getSource } from '@/ai/knowledge/sources';
+import { Button } from '@/ui/Button';
 import { EscalationCard } from '@/ui/EscalationCard';
 import { Banner, Pill } from '@/ui/Feedback';
 import { AppText } from '@/ui/Text';
@@ -39,6 +41,14 @@ export function AnswerCard({ answer, emergencyNumber }: { answer: AssistantAnswe
             {answer.generated.engineLabel}
             {answer.generated.tokensPerSecond ? ` · ${answer.generated.tokensPerSecond.toFixed(1)} tokens/s` : ''} · Checked against the facts below. May contain mistakes — verify with your records.
           </AppText>
+        </View>
+      ) : null}
+
+      {answer.actions.length > 0 ? (
+        <View style={{ gap: SPACE.sm }}>
+          {answer.actions.map((a) => (
+            <Button key={a.href} title={a.label} icon="save-outline" variant="soft" onPress={() => router.push(a.href as Href)} />
+          ))}
         </View>
       ) : null}
 

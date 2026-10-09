@@ -65,7 +65,7 @@ export default function CarePlan() {
       ) : null}
       {q.data && tab === 'labs' ? (
         <View style={{ gap: SPACE.lg }}>
-          <Button title="Enter results from a report" icon="create-outline" onPress={() => router.push({ pathname: '/care/lab/edit', params: { report: '1' } })} />
+          <Button title="Add a result from a report" icon="create-outline" onPress={() => router.push('/care/lab/add')} />
           <View style={{ flexDirection: 'row', gap: SPACE.sm }}>
             <Button title="Schedule a test" icon="calendar-outline" variant="soft" onPress={() => router.push('/care/lab/edit')} style={{ flex: 1 }} />
             {Platform.OS !== 'web' ? <Button title="Scan a report" icon="scan-outline" variant="soft" onPress={() => router.push('/care/lab/scan')} style={{ flex: 1 }} /> : null}

@@ -15,10 +15,12 @@ export type VoiceReading =
 const n = (s: string) => Number(s.replace(',', '.'));
 
 function glucoseContext(t: string): GlucoseContext | null {
-  if (/\bfasting\b|\bbefore breakfast\b|\bwhen i woke\b|\bthis morning before\b/.test(t)) return 'fasting';
+  // "fbs" / "rbs" are the fasting and random blood sugar labels common on Philippine lab slips.
+  if (/\bfasting\b|\bfbs\b|\bbefore breakfast\b|\bwhen i woke\b|\bthis morning before\b/.test(t)) return 'fasting';
   if (/\bafter (eating|meal|meals|breakfast|lunch|dinner|food)\b|\bpost[- ]?meal\b/.test(t)) return 'after_meal';
   if (/\bbefore (lunch|dinner|meal|meals|eating)\b/.test(t)) return 'before_meal';
   if (/\b(bedtime|before bed|before sleeping)\b/.test(t)) return 'bedtime';
+  if (/\brbs\b|\brandom\b/.test(t)) return 'random';
   return null;
 }
 
@@ -34,7 +36,7 @@ export function parseVoiceReading(transcript: string): VoiceReading | null {
     if (s > d) return { type: 'blood_pressure', systolic: s, diastolic: d, pulse };
   }
 
-  const g = /\b(?:sugar|glucose|blood sugar|bg|reading)\D{0,14}(\d{1,3}(?:[.,]\d)?)\s*(mmol|mg)?/.exec(t);
+  const g = /\b(?:sugar|glucose|blood sugar|bg|reading|fbs|rbs|cbg|hgt)\D{0,14}(\d{1,3}(?:[.,]\d{1,2})?)\s*(mmol|mg)?/.exec(t);
   if (g) {
     const unit = g[2] ? (g[2].startsWith('mmol') ? 'mmol/L' : 'mg/dL') : null;
     return { type: 'glucose', value: n(g[1]), unit, context: glucoseContext(t) };

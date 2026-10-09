@@ -71,7 +71,7 @@ function LabForm({ id, initial: t, startWithReport }: { id?: string; initial: La
     });
     setSaving(false);
     if (!ok) return;
-    if (created.id && haveReport) router.replace({ pathname: '/care/lab/result', params: { labId: created.id } });
+    if (created.id && haveReport) router.replace({ pathname: '/care/lab/add', params: { labId: created.id } });
     else router.back();
   };
 

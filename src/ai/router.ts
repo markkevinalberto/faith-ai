@@ -7,6 +7,7 @@ import { detectEmergencySymptoms, evaluateReading, mostSevere, type EscalationRe
 import { glucoseToMgdl } from '../domain/units';
 import type { GlucoseUnit } from '../domain/types';
 import { parseConversion, type ConversionResult } from './conversions';
+import { parseReportedValue, type ReportedValue } from './reported';
 
 export type Intent =
   | 'emergency'
@@ -14,6 +15,7 @@ export type Intent =
   | 'prescribe'
   | 'diagnosis'
   | 'unit_conversion'
+  | 'reported_value'
   | 'clinician_questions'
   | 'readings_summary'
   | 'lab_summary'
@@ -31,6 +33,8 @@ export interface Route {
   timeframeDays: number;
   conversion: ConversionResult | null;
   mentionedMedications: string[];
+  /** A value the person stated in the message ("my hba1c is 4,7"), if any. */
+  reported: ReportedValue | null;
 }
 
 export interface RouteContext {
@@ -141,7 +145,7 @@ export function routeQuestion(question: string, ctx: RouteContext): Route {
   const timeframeDays = parseTimeframeDays(t);
   const mentionedMedications = findMentionedMedications(t, ctx.medicationNames);
   const metrics = (Object.keys(METRIC_PATTERNS) as MetricHint[]).filter((k) => METRIC_PATTERNS[k].test(t));
-  const base = { metrics, timeframeDays, conversion: null as ConversionResult | null, mentionedMedications };
+  const base = { metrics, timeframeDays, conversion: null as ConversionResult | null, mentionedMedications, reported: null as ReportedValue | null };
 
   const emergency = detectEmergencySymptoms(t, ctx.emergencyNumber);
   if (emergency) return { ...base, intent: 'emergency', escalation: emergency };
@@ -156,6 +160,10 @@ export function routeQuestion(question: string, ctx: RouteContext): Route {
   if (conversion && /\b(convert|conversion|in mg|in mmol|to mg|to mmol|to kg|to lb|in kg|in lbs?|to °?[cf]|in °?[cf]|equals?|equivalent|how much is|what is)\b/.test(t)) {
     return { ...base, intent: 'unit_conversion', escalation, conversion };
   }
+
+  // A stated value ("my hba1c is 4,7", "fbs 5.6") is answered as a value, not as a definition.
+  const reported = parseReportedValue(question);
+  if (reported) return { ...base, intent: 'reported_value', escalation, reported };
 
   if (CLINICIAN_QUESTIONS.test(t)) return { ...base, intent: 'clinician_questions', escalation };
 
