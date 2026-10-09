@@ -65,7 +65,7 @@ npx eas-cli@latest build -p android --profile preview
 | `expo lint` | Clean |
 | `expo-doctor` | Every check passes except the React Native Directory metadata check. It flags `@react-native-ml-kit/text-recognition` (untested on the New Architecture) and `whisper.rn` and `@fugood/react-native-audio-pcm-stream` (no metadata). Legacy native modules run through React Native's interop layer, and the Gradle plugin adds their missing namespaces. Confirm on the device |
 | Web UI walkthrough | Onboarding → sample data → Home → Vitals chart and target band → add reading → safety card → Ask (deterministic answer and dose-change refusal) → all settings screens render |
-| EAS preview build | First APK (core app and LLM) built successfully on 2026-10-09. A second build adds scan, voice, semantic search and the offline badge |
+| EAS preview build | Build 4 (commit `70428b5`, 2026-10-09) is the current preview APK: core app, LLM, scan, voice, semantic search, offline badge, and the database fix. Builds 1–3 either failed to open the database on the phone or failed to bundle |
 | **Physical Android device** | **In progress.** The first APK failed at startup ("Couldn't open your records"): expo-sqlite's exclusive transactions open a second connection that never receives the SQLCipher key. Fixed by running transactions on the single keyed connection (`src/db/singleConnection.ts`) and turning off R8 minification. llama.rn and whisper.rn inference, ML Kit OCR, microphone capture, notifications and biometrics still need checking on the phone. Follow the checklist in the device-testing doc |
 
 ## Project structure
