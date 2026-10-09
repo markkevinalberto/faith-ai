@@ -5,7 +5,7 @@ import { Linking, Platform, Pressable, View } from 'react-native';
 
 import { useEngineState } from '@/ai/inference/engineStore';
 import { getModelSpec } from '@/ai/inference/modelCatalog';
-import { PROVIDERS, loadOnlineSettings, useOnlineSettings } from '@/ai/inference/onlineAssistant';
+import { PROVIDERS, isOnlineConfigured, loadOnlineSettings, useOnlineSettings } from '@/ai/inference/onlineAssistant';
 import { initials } from '@/components/AppChrome';
 import { TextSizePicker } from '@/components/TextSizePicker';
 import { deleteProfileData } from '@/db/dataManagement';
@@ -199,9 +199,9 @@ export default function Settings() {
             iconTone="info"
             title="Online assistant (optional)"
             subtitle={
-              online?.enabled && online.hasKey
-                ? `On · ${PROVIDERS[online.provider].label} ${online.model}. Used when you have internet; your question and the facts shown are sent there.`
-                : 'Off. Clearer answers from a bigger online model when you have internet, with your own free key.'
+              isOnlineConfigured(online)
+                ? `On · ${PROVIDERS[online!.provider].label} ${online!.model}. Used when you have internet; your question and the facts shown are sent there.`
+                : 'Off. Clearer answers from a bigger online model when you have internet. One tap, no key needed.'
             }
             onPress={() => router.push('/settings/online')}
           />

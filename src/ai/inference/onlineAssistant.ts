@@ -145,6 +145,19 @@ export async function saveOnlineSettings(db: SqlExecutor, patch: Partial<Omit<On
   return next;
 }
 
+/**
+ * True when the online assistant is switched on and has everything it needs apart from internet:
+ * a key only for providers that require one (FAITH's relay needs none), an address for "custom",
+ * and a model. The status badge and Settings use this, so the relay never shows as "off".
+ */
+export function isOnlineConfigured(s: OnlineSettings | null | undefined): boolean {
+  if (!s || !s.enabled) return false;
+  const provider = PROVIDERS[s.provider];
+  if (provider.requiresKey && !s.hasKey) return false;
+  if (s.provider === 'custom' && !s.baseUrl.trim()) return false;
+  return s.model.trim().length > 0;
+}
+
 export function useOnlineSettings(): OnlineSettings | null {
   return useSyncExternalStore(
     subscribe,

@@ -13,7 +13,7 @@ import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { engineStore, useEngineState } from '@/ai/inference/engineStore';
 import { localModels, useLocalModels } from '@/ai/inference/localModels';
 import { getModelSpec, type ModelSpec } from '@/ai/inference/modelCatalog';
-import { PROVIDERS, loadOnlineSettings, useOnlineSettings } from '@/ai/inference/onlineAssistant';
+import { PROVIDERS, isOnlineConfigured, loadOnlineSettings, useOnlineSettings } from '@/ai/inference/onlineAssistant';
 import { SETTINGS, setSetting } from '@/db/repo/profiles';
 import { useApp } from '@/state/AppState';
 import { Button } from '@/ui/Button';
@@ -81,10 +81,11 @@ export function OfflineBadge() {
 
   const offline = connection === 'airplane' || connection === 'offline';
   const here = Platform.OS === 'web' ? 'in this browser' : 'on this phone';
-  // The online assistant only counts when it is on, has a key and the internet is reachable.
-  const onlineOn = !!onlineSettings?.enabled && !!onlineSettings?.hasKey;
+  // The online assistant only counts when it is on, configured (a key only where one is needed;
+  // FAITH's relay needs none) and the internet is reachable.
+  const onlineOn = isOnlineConfigured(onlineSettings);
   const usingOnline = onlineOn && !offline;
-  const providerLabel = PROVIDERS[onlineSettings?.provider ?? 'groq'].label;
+  const providerLabel = PROVIDERS[onlineSettings?.provider ?? 'faith'].label;
   const headline = usingOnline ? `Online assistant · ${providerLabel}` : offline ? `${connection === 'airplane' ? 'Airplane mode' : 'Offline'} · AI ${here}` : `Private · AI runs ${here}`;
   const active = engine.modelId ? getModelSpec(engine.modelId) : null;
   const localLine =
