@@ -44,6 +44,7 @@ Everything FAITH uses to work, and how it was built. Last updated 2026-10-09.
   - expo-build-properties, expo-dev-client
 - react-native-svg (MIT), used for the custom time-scaled charts
 - @fugood/react-native-audio-pcm-stream 1.1.4 (MIT): microphone capture as raw PCM in memory
+- buffer 6.0.3 (MIT, feross): the Node `Buffer` polyfill that whisper.rn expects the app to provide
 - @react-native-community/datetimepicker (MIT)
 - @expo/vector-icons and Ionicons (MIT)
 - Testing and tooling: Jest with jest-expo, Node's built-in `node:sqlite` for integration tests, ESLint with eslint-config-expo, and EAS Build for Android binaries
