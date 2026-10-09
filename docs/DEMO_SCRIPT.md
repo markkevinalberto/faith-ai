@@ -2,13 +2,13 @@
 
 ## Before you present
 - Install the **preview** APK (it needs no PC or dev server).
-- Settings → On-device AI, install:
+- On first launch on Wi-Fi, FAITH downloads the right models for the phone by itself (progress card on Home). Otherwise use Settings → On-device AI and install:
   - **Qwen2.5 1.5B**, or 0.5B on phones with less than 6 GB RAM. Run the quick test once.
   - **all-MiniLM-L6-v2** for semantic search (25 MB).
   - **Whisper base.en** for voice (148 MB).
 - Have a printed medicine label (or a photo of one) and a printed lab report ready. Grant camera and microphone permission once.
 - Turn on **airplane mode** and keep it on for the whole demo.
-- Disable battery saver, set font size to default, and charge the phone.
+- Disable battery saver and charge the phone. To show the senior-friendly design, set Settings → Display → Text size to Large.
 - Start from a fresh sample profile: Settings → Remove sample profile, then Add sample data profile.
 
 ## Flow
@@ -22,8 +22,9 @@
    - Tap **Fasting**: the shaded band is the clinician-set target, and the caption names its source.
    - Note that statistics and trend are computed by tested code, not by AI.
 4. **Safety** (30 s): tap + and add a glucose reading of **45 mg/dL**. A level-2 hypoglycaemia card appears with steps and a Call button, labelled as draft guidance pending clinical review.
+4b. **FAITH speaks** (45 s): tap + and save blood pressure **150/95**. FAITH (the mascot) answers in a speech bubble: where it sits against the target, the previous reading, tips, and **What to eat** (less salt, soy sauce and patis; calamansi and garlic for flavour). The note is reworded by the on-device model and checked by the guard. She then asks “Do you have chest pain, a severe headache…?” Tap **No**, then answer the resting question; each answer is saved with the reading. (Tapping **Yes** on the red-flag question shows the emergency card with a Call button.)
 5. **Ask FAITH, in airplane mode** (75 s):
-   - Point to the green badge, **"Airplane mode · AI running on this phone"**, with LLM, semantic search, Whisper and ML Kit all ticked.
+   - Point to the line at the top, **"Airplane mode · AI on this phone"**, and tap it: the dropdown shows the chat model in use (switch models here), search by meaning, Whisper voice and ML Kit scanning.
    - Tap the **mic** and say "Summarize my glucose this week". Whisper transcribes it on the phone. Show the **Generated explanation · on this device** block with tokens per second, then **From your records** (computed facts with sources) and **Reference library** (draft review status).
    - Ask "I missed my metformin dose, should I take two?". FAITH refuses to give dose advice, shows the recorded instructions, and **the model isn't called**.
    - Ask "Prepare questions for my next appointment" to get data-driven questions.
