@@ -8,6 +8,7 @@
 |---|---|
 | Repository | https://github.com/markkevinalberto/faith-ai-appbuildersph |
 | Web demo (same AI in the browser) | https://faith-ai-web.vercel.app |
+| Landing page | https://faith-ai-landing.vercel.app |
 | Android APK | https://github.com/markkevinalberto/faith-ai-appbuildersph/releases (preview build 9) |
 | Submitted by | Mark Kevin Alberto (GitHub: markkevinalberto) |
 | Built | 9–10 October 2026, from an empty `create-expo-app` template |

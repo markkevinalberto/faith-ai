@@ -2,7 +2,7 @@
 
 **F**amily **A**ssistant for **I**llness, **T**reatment & **H**ealth. *Your health, in your hands. Even offline.*
 
-Source: https://github.com/markkevinalberto/faith-ai-appbuildersph · Web demo: https://faith-ai-web.vercel.app · Landing page and Android APK links in the sections below.
+Source: https://github.com/markkevinalberto/faith-ai-appbuildersph · Web demo: https://faith-ai-web.vercel.app · Landing page: https://faith-ai-landing.vercel.app · Android APK: https://github.com/markkevinalberto/faith-ai-appbuildersph/releases
 
 **A private, offline-first health companion for people living with diabetes, high blood pressure and other long-term conditions.** It runs on Android first, with iOS to follow, using React Native and Expo. All of its AI runs **on the phone**: llama.cpp, whisper.cpp and Google ML Kit.
 
@@ -113,7 +113,7 @@ docs/           Implementation plan, Android build and device testing, privacy a
 - [Privacy, data handling and medical safety](docs/PRIVACY_AND_SAFETY.md)
 - [Disclosures: models, libraries, tools](DISCLOSURES.md)
 - [Demo script](docs/DEMO_SCRIPT.md)
-- Landing page: [`landing/`](landing/) is a static site (`index.html` plus `img/`), deployable to any static host. `faith-landing.html` is the source fragment; `node landing/make-index.js` regenerates `index.html` from it.
+- Landing page: live at https://faith-ai-landing.vercel.app (Vercel project `faith-ai-landing`). [`landing/`](landing/) is a static site (`index.html` plus `img/`), deployable to any static host. `faith-landing.html` is the source fragment; `node landing/make-index.js` regenerates `index.html` from it. To redeploy, copy `index.html` and `img/` into an empty folder named `faith-ai-landing` and run `vercel deploy --prod --yes` there.
 
 ## Known limitations
 - **Some icons are upscaled.** The mascot poses are sharp transparent cut-outs from the character sheet; the small 3D icons (shield, bell, globe, cloud) are 2× upscales cut out of the design board and look soft on high-density screens. Replace any of them with a full-resolution export of the same file name, and update its pixel size in `src/ui/Illustration.tsx`.
